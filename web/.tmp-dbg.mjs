@@ -1,0 +1,11 @@
+import { chromium } from '@playwright/test';
+const b = await chromium.launch();
+const page = await b.newPage({ viewport: { width: 390, height: 844 } });
+page.on('pageerror', (e) => console.log('PAGEERROR:', String(e).split('\n').slice(0, 3).join(' | ')));
+await page.goto('http://localhost:3128/');
+await page.waitForTimeout(2000);
+const h1 = await page.locator('.page-head h1').textContent().catch(() => null);
+const fields = await page.locator('.van-field input').count();
+console.log('h1 =', h1, '| van-field input 数量 =', fields);
+await page.screenshot({ path: 'E:/study/zi/MyEvent/.dbg.png' });
+await b.close();

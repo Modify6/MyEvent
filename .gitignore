@@ -1,0 +1,47 @@
+node_modules/
+dist/
+server/data/
+*.log
+.DS_Store
+
+# 安卓构建产物
+app/android/.gradle/
+app/android/build/
+app/android/app/build/
+app/android/local.properties
+app/android/.idea/
+app/android/capacitor-cordova-android-plugins/
+MyTime.apk
+
+# ZCode 工具内部文件
+.zcode/
+
+.apk-version
+
+# 诊断临时文件
+.net-raw.txt
+.net-hit.txt
+
+# E2E 调试产物
+.debug-*
+.fail-*
+
+# Playwright 产物
+test-results/
+
+# 诊断临时文件
+.debug-state.json
+.ann.json
+.ci-log.txt
+.jobs.json
+.lastrun.json
+
+# SSH 部署密钥（私钥绝不入库）
+.ssh-key/
+deploy/config
+.ann.json
+.jobs.json
+.lastrun.json
+.debug-state.json
+MyTime-v*.apk
+.apk-build-state.json
