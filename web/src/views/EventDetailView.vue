@@ -10,6 +10,7 @@ import { useSubjectStore } from '../stores/subject.js';
 import { useCatalogStore } from '../stores/catalog.js';
 import NoteComposer from '../components/NoteComposer.vue';
 import NoteEditor from '../components/NoteEditor.vue';
+import { kindMeta, parseTrigger } from '../lib/display.js';
 import { fmtDate, fmtTime } from '../lib/time.js';
 
 const route = useRoute();
@@ -75,6 +76,13 @@ async function removeItem(it) {
   if (it.type === 't') await thoughtStore.remove(it.raw.id);
   else await eventStore.removeEntry(it.raw.id);
 }
+// 视觉映射:类型色标签(挂记取 · 前的原始类型)/触发源图标
+const kindStyle = (k) => {
+  const m = kindMeta(k.split(' · ')[0]);
+  return { color: m.color, borderColor: m.color + '59', background: m.color + '1f' };
+};
+const kindIcon = (k) => kindMeta(k.split(' · ')[0]).icon;
+const trig = (src) => parseTrigger(src);
 
 const showNote = ref(false);
 const showSummary = ref(false);
@@ -126,13 +134,13 @@ async function removeThread() {
           @touchend="cancelPress"
           @contextmenu.prevent
         >
-          <div class="tl-kind" :class="{ 'k-summary': it.summary }">{{ it.kind }}</div>
+          <div class="tl-kind" :style="kindStyle(it.kind)">{{ kindIcon(it.kind) }} {{ it.kind }}</div>
           <div class="row-main">
             <div class="tl-text">{{ it.content }}</div>
             <div class="muted">
               {{ fmtDate(it.at) }} {{ fmtTime(it.at) }}
-              <template v-if="it.edited"> · 已编辑</template>
-              <template v-if="it.trigger"> · {{ it.trigger }}</template>
+              <template v-if="it.edited"> · ✎ 已编辑</template>
+              <template v-if="trig(it.trigger)"> · <span class="trig">{{ trig(it.trigger).icon }} {{ trig(it.trigger).text }}</span></template>
             </div>
           </div>
         </div>
@@ -170,9 +178,9 @@ async function removeThread() {
 .tl-legend { font-size: 11px; color: var(--text-3); font-weight: 400; margin-left: 8px; }
 .tl-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); align-items: flex-start; }
 .tl-item:last-child { border-bottom: 0; }
-.tl-item.summary { background: color-mix(in srgb, var(--brand) 5%, transparent); border-radius: 8px; padding: 10px 8px; margin: 4px 0; border-bottom: 0; }
-.tl-kind { flex: none; font-size: 11px; color: var(--text-3); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; margin-top: 2px; white-space: nowrap; }
-.tl-kind.k-summary { color: var(--brand); border-color: var(--brand); font-weight: 600; }
+.tl-item.summary { background: color-mix(in srgb, var(--brand) 5%, transparent); border-left: 3px solid var(--brand); border-radius: 8px; padding: 10px 8px; margin: 4px 0; border-bottom: 0; }
+.tl-kind { flex: none; font-size: 11px; border: 1px solid; border-radius: 4px; padding: 1px 6px; margin-top: 2px; white-space: nowrap; font-weight: 600; }
+.trig { color: var(--text-2); }
 .row-main { flex: 1; min-width: 0; }
 .tl-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .tl-item .van-icon { cursor: pointer; margin-top: 3px; flex: none; }

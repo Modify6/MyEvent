@@ -12,6 +12,7 @@ import NoteEditor from '../components/NoteEditor.vue';
 import QuickCreate from '../components/QuickCreate.vue';
 import AttachGuide from '../components/AttachGuide.vue';
 import { THOUGHT_KINDS, TRIGGER_KINDS } from '../lib/domain.js';
+import { kindMeta, parseTrigger } from '../lib/display.js';
 import { fmtTime } from '../lib/time.js';
 
 const router = useRouter();
@@ -81,6 +82,13 @@ const groups = computed(() => {
 
 const subjectName = (id) => subjectStore.nameOf(id);
 const eventTitle = (id) => eventStore.byId(id)?.title || '线索';
+// 视觉映射:类型色标签 / 触发源图标
+const kindStyle = (k) => {
+  const m = kindMeta(k);
+  return { color: m.color, borderColor: m.color + '59', background: m.color + '1f' };
+};
+const kindIcon = (k) => kindMeta(k).icon;
+const trig = (src) => parseTrigger(src);
 
 // 二次修改:点击=编辑,长按=操作菜单(编辑/删除);旧值自动存入修订历史
 const showEditor = ref(false);
@@ -194,17 +202,17 @@ const showGuide = ref(false);
             @touchend="cancelPress"
             @contextmenu.prevent
           >
-            <div class="feed-kind" :class="{ 'k-summary': it.summary }">{{ it.kind }}</div>
+            <div class="feed-kind" :style="kindStyle(it.kind)">{{ kindIcon(it.kind) }} {{ it.kind }}</div>
             <div class="row-main">
               <div class="feed-text">{{ it.content }}</div>
               <div class="muted">
                 {{ fmtTime(it.at) }}
-                <template v-if="it.edited"> · 已编辑</template>
-                <template v-if="it.trigger"> · {{ it.trigger }}</template>
+                <template v-if="it.edited"> · ✎ 已编辑</template>
+                <template v-if="trig(it.trigger)"> · <span class="trig">{{ trig(it.trigger).icon }} {{ trig(it.trigger).text }}</span></template>
               </div>
               <div class="feed-chips">
-                <span v-if="it.eventId" class="chip" @click.stop="router.push(`/events/${it.eventId}`)"># {{ eventTitle(it.eventId) }}</span>
-                <span v-if="it.subjectId" class="chip" @click.stop="router.push(`/subjects/${it.subjectId}`)">@ {{ subjectName(it.subjectId) }}</span>
+                <span v-if="it.eventId" class="chip chip-thread" @click.stop="router.push(`/events/${it.eventId}`)"># {{ eventTitle(it.eventId) }}</span>
+                <span v-if="it.subjectId" class="chip chip-subject" @click.stop="router.push(`/subjects/${it.subjectId}`)">@ {{ subjectName(it.subjectId) }}</span>
               </div>
             </div>
           </div>
@@ -248,12 +256,14 @@ const showGuide = ref(false);
 .guide-link { color: var(--brand); cursor: pointer; font-size: 12px; }
 .feed-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .feed-item:last-child { border-bottom: 0; }
-.feed-item.summary { background: color-mix(in srgb, var(--brand) 5%, transparent); border-radius: 8px; padding: 10px 8px; margin: 4px 0; border-bottom: 0; }
-.feed-kind { flex: none; font-size: 11px; color: var(--text-3); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; height: fit-content; margin-top: 2px; white-space: nowrap; }
-.feed-kind.k-summary { color: var(--brand); border-color: var(--brand); font-weight: 600; }
+.feed-item.summary { background: color-mix(in srgb, var(--brand) 5%, transparent); border-left: 3px solid var(--brand); border-radius: 8px; padding: 10px 8px; margin: 4px 0; border-bottom: 0; }
+.feed-kind { flex: none; font-size: 11px; border: 1px solid; border-radius: 4px; padding: 1px 6px; height: fit-content; margin-top: 2px; white-space: nowrap; font-weight: 600; }
+.trig { color: var(--text-2); }
 .row-main { flex: 1; min-width: 0; }
 .feed-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .feed-chips { margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; }
 .feed-chips .chip { cursor: pointer; }
+.chip-thread { color: var(--brand); background: color-mix(in srgb, var(--brand) 12%, transparent); }
+.chip-subject { color: #ff9d5c; background: color-mix(in srgb, #ff9d5c 12%, transparent); }
 .feed-item { cursor: pointer; -webkit-user-select: none; user-select: none; }
 </style>
