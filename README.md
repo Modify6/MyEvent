@@ -1,37 +1,117 @@
-# MyEvent · 认知复盘
+# MyEvent · 个人认知复盘系统
 
-**个人认知复盘系统**：以「对象」为中心，同时记录外部事件与内部想法的演化；预判先锁定再验证，沉淀「如果 X，则 Y」的可复用经验规则。
-PWA + 安卓 APK（com.myevent.app）+ 自建同步服务，本地优先、单用户、隐私优先。架构平台层（本地存储 / LWW 增量同步 / CI / 发版部署）继承自同作者的 MyTime 项目。
+[![License: MIT](https://img.shields.io/badge/License-MIT-4f6ef7.svg)](LICENSE)
+![Vue 3](https://img.shields.io/badge/Vue-3-42b883.svg)
+![Platform](https://img.shields.io/badge/PWA%20%2B%20Android-Capacitor-4f6ef7.svg)
+![Local-first](https://img.shields.io/badge/%E6%9C%AC%E5%9C%B0%E4%BC%98%E5%85%88-%E6%97%A0%E9%9C%80%E8%81%94%E7%BD%91-34c273.svg)
+
+> 经历的事不能只变成流水账;对一个人、项目、标的的想法在演化;预判需要被记录、锁定、验证——**才知道自己的判断偏差在哪**。
+>
+> MyEvent 以「对象」为中心,同时记录外部事件与内部想法,通过可验证预判不断校准判断,沉淀「如果 X,则 Y」的可复用经验规则。
+
+## 它解决什么问题
+
+| 痛点 | MyEvent 的做法 |
+|---|---|
+| 经历变成流水账 | 主入口是**收件箱和对象**,不是"今日日记";复盘必须产出可执行的「下次规则」 |
+| 想法碎片化、看不到演化 | 想法按对象归档,与事实、预判并列为**三轨时间线**,判断怎么变的一目了然 |
+| 预判凭感觉、事后诸葛 | 预判**先定义验证标准再锁定**(原始判断不可改),窗口到期按预设标准评分 |
+| 不知道自己哪里不准 | **置信度分桶校准**:你说的 70% 真的是 70% 吗;偏差归因到事实/假设/规则/推理哪一环 |
+| 经验无法复用 | 复盘与验证自动沉淀规则卡片,相似场景下次直接调用并登记有效性 |
 
 ## 五大入口
 
-| 入口 | 回答的问题 |
+```
+收件箱 ── 有什么需要整理和复盘(待复盘事件 / 想法收件箱 / 待验证预判)
+  对象 ── 一个人/项目/标的的事实线、想法线、预判线如何演化 + 当前观点快照
+  预判 ── 草稿 → 锁定 → 到期验证 → 校准;进行中上限 15 条防跟踪过载
+ 经验库 ── 「如果 X,则 Y」规则卡片,登记每次使用是否有效
+  回顾 ── 周概览 / 高频场景 / 置信度校准(含完美校准参考线)
+```
+
+**核心闭环**:
+
+1. **事件**:30 秒快速捕获 → 四步结构化复盘(目标预期 → 过程结果 → 教训规则);空泛规则(「要冷静」「要细心」)会被句式校验直接拦下
+2. **想法**:10 秒快记进收件箱,每周整理归入对象;重要想法一键升级为预判
+3. **预判**:草稿期自由编辑 → **锁定原始快照**(防事后合理化的关键)→ 窗口到期 → 按提交时定义的标准评分(命中/部分/错误/无法验证)+ 偏差归因 + 链路最弱环节 + 事后信息分离 → 沉淀校准规则
+
+## 技术栈
+
+| 层 | 技术 |
 |---|---|
-| 收件箱 | 有什么需要整理和复盘（待复盘事件 / 想法收件箱 / 待验证预判） |
-| 对象 | 这个人/项目/标的的事实、想法、预判如何演化（三线时间线 + 当前观点快照） |
-| 预判 | 我做过哪些判断，哪些待验证，我准不准（锁定 → 验证 → 校准） |
-| 经验库 | 我沉淀了哪些可复用规则，它们是否仍然有效 |
-| 回顾 | 本周做了什么、置信度校准如何、哪些场景反复出现 |
+| 前端 | Vue 3(`<script setup>`)+ Vant 4 + Pinia 3 + Vue Router 4 + dayjs |
+| 本地存储 | Dexie 4(IndexedDB),离线优先,个人量级内存过滤 |
+| 同步(可选) | 自建 Fastify 5 + SQLite 服务端;outbox 队列 + LWW 合并 + 增量游标,30s 轮询 + 写后 3s 防抖上推 |
+| 安卓 | Capacitor 7,APK 内置资源(WebView 离线可用),与网页端同一套代码 |
+| PWA | vite-plugin-pwa(仅浏览器端注册,APK 内自动禁用) |
+| 测试 | Vitest(领域规则/数据层 20 例)+ Playwright 冒烟 e2e |
 
 ## 快速开始
 
 ```bash
 npm install && npm install --prefix server && npm install --prefix web
-npm run dev      # 开发模式 http://localhost:5173
-npm run build && npm start   # 生产模式 http://localhost:3129
-npm test         # 单元测试
+
+npm run dev                # 开发模式:web http://localhost:5173 (代理 /api → 3129)
+npm run build && npm start # 生产模式:http://localhost:3129 (server 托管构建产物)
+npm test                   # 单元测试
 ```
 
-默认密码 `mytime123`（环境变量 `MYEVENT_PASSWORD` 修改）。数据在 `server/data/`。
+默认密码 `mytime123`(环境变量 `MYEVENT_PASSWORD` 修改)。数据在 `server/data/`,浏览器端数据在 IndexedDB——**不连接服务器也完全可用**,同步只是可选增强。
 
-## 架构
+### 多设备同步
 
-平台层（数据/同步/服务端/CI/发版/部署）继承自 MyTime 项目的架构模式：Dexie(IndexedDB) 本地优先 + outbox 队列 + LWW 增量同步 + Fastify/SQLite 服务端。
-领域层（认知复盘）：subjects（对象）/ events（事件+复盘）/ thoughts（想法）/ predictions（预判）/ rules（经验规则）+ categories（场景标签）；JSON 列（依据链/复盘/快照等）经同步层序列化，详见 `web/src/db/repo.js`。
+App/网页「设置」页填入服务器地址(如 `http://192.168.x.x:3129`)+ 密码即可。支持:
 
-## 打包 APK / 部署 / 版本发布
+- 增量同步(LWW 冲突合并,多端写入安全)
+- 服务端每日快照备份(保留 30 份)
+- 客户端 JSON 导出/导入(按时间戳合并,不依赖服务器)
 
-与 MyTime 完全一致：`apk.bat`（工具链自举）、`bash deploy/upload.sh`、`node scripts/release.mjs minor`。
-首次使用前把 deploy/deploy.config.example 复制为 deploy/config 并填入自己的服务器。
+### 安卓 APK
 
-> 0.2.0 起安卓 appId 已由 com.mytime.app 改为 com.myevent.app，旧 MyTime APK 不会被覆盖安装。
+```bash
+apk.bat        # 或 node scripts/apk.mjs
+```
+
+零手动配置:首次运行自动下载 JDK 21 + Android SDK 到 `../toolchain/`,构建 `MyEvent-v<版本>.apk`。当前身份 `com.myevent.app`(与旧 MyTime 应用相互独立,可共存)。
+
+### 公网部署(可选)
+
+VPS + 域名一键部署(Caddy 自动 HTTPS),见 [deploy/README.md](deploy/README.md)。
+
+## 数据模型
+
+```
+Subject 对象        人/项目/公司/投资标的…长期关注单元 + 当前观点快照
+  Event 事件        客观事实 + 四步复盘内容(JSON 列) + 沉淀出的规则引用
+  Thought 想法      观察/假设/判断/疑问/情绪/灵感/决策;收件箱 → 归档;可升级预判
+  Prediction 预判   可证伪判断;锁定快照(不可变) + 验证标准 + 结果与偏差归因
+  Rule 经验规则     「如果 X,则 Y」;来源引用事件/预判;有效性登记
+  Category 场景标签 工作/人际/投资/学习/决策/生活/其他
+```
+
+通用约定:全表 `id / createdAt / updatedAt(逻辑时钟,LWW 依据)/ deleted(软删)/ serverRev(增量游标)`;数组与对象字段(复盘、依据链、快照等)以 JSON 列经同步层序列化。
+
+## 项目结构
+
+```
+web/          Vue 应用(src/views 五大入口 · src/components 弹层 · src/stores 领域 · src/db 存储与同步)
+server/       Fastify + SQLite 同步服务(单文件入口 + 数据层)
+app/          Capacitor 安卓壳工程
+scripts/      零依赖图标/启动图生成、APK 打包、发版、版本贯通
+deploy/       VPS 一键部署脚本与指南
+web/tests/    Vitest 单测   ·   web/e2e/   Playwright e2e
+```
+
+## 路线图
+
+- [x] **P0** 对象/事件复盘/想法/预判闭环/经验规则/收件箱/搜索/导出导入
+- [ ] **P1** 对象三轨时间线细化、想法修正链、预判检查点与过程追加、思考链路完整诊断、周/月回顾完整版、盲测模式
+- [ ] **P2** AI 辅助提问与链路摘要(调用前脱敏、可完全关闭)、端到端加密云同步
+
+## License
+
+[MIT](LICENSE)
+
+## 致谢
+
+平台层(本地优先存储、LWW 增量同步协议、发版与部署体系)继承自同作者的 [MyTime](https://github.com/Modify6/MyTime) 时间账本项目。
