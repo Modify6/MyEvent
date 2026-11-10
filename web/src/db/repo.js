@@ -1,7 +1,6 @@
 // 数据仓库层：所有本地写入的必经之路 —— 写 IndexedDB + 进 outbox 队列 + 通知订阅者刷新
 import { db } from './schema.js';
 import { shouldReplace } from './merge.js';
-import { uuid } from '../lib/util.js';
 
 const listeners = new Set();
 export function onChange(fn) {
@@ -148,5 +147,3 @@ export async function getMeta(key, fallback = null) {
 export async function setMeta(key, value) {
   await db.meta.put({ key, value });
 }
-
-export { uuid };

@@ -53,3 +53,6 @@ server/data-backup/
 scripts/migrate-*.mjs
 scripts/patch-apk-bat*
 scripts/convert-*.ps1
+.cal-preview*.png
+.heat-preview*.png
+.vh-preview*.png

@@ -73,6 +73,10 @@ function openTimelineThought(t) {
   editThought.value = t;
   showThought.value = true;
 }
+function openNewThought() {
+  editThought.value = null;
+  showThought.value = true;
+}
 function openTimelineEvent(e) {
   reviewEventId.value = e.id;
   showReview.value = true;
@@ -122,7 +126,7 @@ function openTimelineEvent(e) {
     <!-- 快捷操作 -->
     <div class="card quick-row">
       <van-button size="small" plain round type="primary" icon="edit" @click="showEvent = true">记事件</van-button>
-      <van-button size="small" plain round type="primary" icon="chat-o" @click=";(editThought = null), (showThought = true)">记想法</van-button>
+      <van-button size="small" plain round type="primary" icon="chat-o" @click="openNewThought">记想法</van-button>
       <van-button size="small" plain round type="primary" icon="aim" @click="showPred = true">做预判</van-button>
     </div>
 

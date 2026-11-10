@@ -1,8 +1,8 @@
 {
-  "name": "mytime-app",
-  "version": "0.1.0",
+  "name": "myevent-app",
+  "version": "0.2.0",
   "private": true,
-  "description": "MyTime 安卓壳工程（Capacitor）——依赖隔离在本目录，引用 ../web/dist",
+  "description": "MyEvent 安卓壳工程（Capacitor）——依赖隔离在本目录，引用 ../web/dist",
   "scripts": {
     "sync": "cap sync android",
     "open": "cap open android"

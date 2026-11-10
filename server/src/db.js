@@ -61,7 +61,17 @@ function createTableSql(table, cols) {
 
 export function openDb(dataDir) {
   fs.mkdirSync(dataDir, { recursive: true });
-  const db = new DatabaseSync(path.join(dataDir, 'mytime.db'));
+  // 一次性迁移（MyTime 时期）：mytime.db → myevent.db，主文件与 WAL/SHM 边车一起改名，内容无损
+  const newMain = path.join(dataDir, 'myevent.db');
+  const oldMain = path.join(dataDir, 'mytime.db');
+  if (!fs.existsSync(newMain) && fs.existsSync(oldMain)) {
+    for (const suffix of ['', '-wal', '-shm']) {
+      const from = oldMain + suffix;
+      if (fs.existsSync(from)) fs.renameSync(from, newMain + suffix);
+    }
+    console.log('已迁移历史数据库 mytime.db → myevent.db');
+  }
+  const db = new DatabaseSync(newMain);
   db.exec('PRAGMA journal_mode = WAL;');
   for (const [table, cols] of Object.entries(TABLES)) {
     db.exec(createTableSql(table, cols));

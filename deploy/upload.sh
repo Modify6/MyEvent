@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MyTime 本地上传脚本（Windows 下用 Git Bash 运行）：
+# MyEvent 本地上传脚本（Windows 下用 Git Bash 运行）：
 #   bash deploy/upload.sh
 # 前置：复制 deploy/deploy.config.example 为 deploy/config 并填写真实值；
 #       服务器 SSH 可登录（首次可用密码，之后建议 ssh-copy-id 配密钥）。
@@ -12,7 +12,7 @@ source deploy/config
 : "${SERVER_HOST:?SERVER_HOST 未设置}" "${SERVER_USER:?SERVER_USER 未设置}" "${SERVER_PORT:?SERVER_PORT 未设置}"
 : "${DOMAIN:?DOMAIN 未设置}"
 
-echo "== 上传代码到 $SERVER_USER@$SERVER_HOST:/opt/mytime =="
+echo "== 上传代码到 $SERVER_USER@$SERVER_HOST:/opt/myevent =="
 # SSH 解析：Git Bash(MSYS) 对 Windows 盘上的私钥收紧不了权限，OpenSSH 会拒载私钥
 # （表现为 Server accepts key 却签名失败）——优先用 Windows 自带 OpenSSH（按 ACL 校验）
 # 部署密钥：.ssh-key/id_ed25519（v4，无口令；服务器端在 root 的 authorized_keys）
@@ -40,11 +40,11 @@ tar -czf - \
   --exclude=./.debug-state.json \
   --exclude=./.apk-version \
   . | "$SSH_CMD" "${SSH_OPTS[@]}" -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" \
-  "sudo mkdir -p /opt/mytime && sudo tar -xzf - -C /opt/mytime && sudo chown -R root:root /opt/mytime"
+  "sudo mkdir -p /opt/myevent && sudo tar -xzf - -C /opt/myevent && sudo chown -R root:root /opt/myevent"
 
 echo "== 远端执行 server-setup.sh（装 Node/Caddy、构建、systemd、Caddy 自动 HTTPS）=="
 "$SSH_CMD" "${SSH_OPTS[@]}" -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" \
-  "cd /opt/mytime && sudo DOMAIN='$DOMAIN' APP_PORT='${APP_PORT:-3128}' bash deploy/server-setup.sh"
+  "cd /opt/myevent && sudo DOMAIN='$DOMAIN' APP_PORT='${APP_PORT:-3128}' bash deploy/server-setup.sh"
 
 echo
 echo "部署完成。验证: https://$DOMAIN/api/health"

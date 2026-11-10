@@ -36,6 +36,10 @@ function openThought(t) {
   editThought.value = t;
   showThought.value = true;
 }
+function openNewThought() {
+  editThought.value = null;
+  showThought.value = true;
+}
 function openPrediction(draft) {
   predDraft.value = draft;
   showPred.value = true;
@@ -56,7 +60,7 @@ function openPrediction(draft) {
       <div class="muted" style="margin-bottom: 10px">先快速捕获,再结构化整理</div>
       <div class="quick-row">
         <van-button type="primary" round icon="edit" @click="showEvent = true">记事件</van-button>
-        <van-button type="primary" plain round icon="chat-o" @click=";[(editThought = null), (showThought = true)]">记想法</van-button>
+        <van-button type="primary" plain round icon="chat-o" @click="openNewThought">记想法</van-button>
       </div>
     </div>
 

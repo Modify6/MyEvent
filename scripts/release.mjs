@@ -129,7 +129,7 @@ if (pushed) {
     repoUrl = capture('git remote get-url origin').replace(/\.git$/, '').replace(/^git@github\.com:/, 'https://github.com/');
   } catch {}
   console.log(repoUrl ? `GitHub: ${repoUrl}/releases/tag/v${next}` : `GitHub: 标签 v${next} 已推送`);
-  console.log('CI 将自动构建 APK 并挂到该 Release，几分钟后手机可直接下载。');
+  console.log('若已配置 CI 工作流，将自动构建 APK 并挂到该 Release。');
 } else {
   console.log('推送未成功（网络波动）：提交与标签已留在本地，网络恢复后执行 git push origin master --tags 即可。');
 }

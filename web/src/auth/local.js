@@ -22,10 +22,29 @@ const safe = {
   },
 };
 
-const K_SERVER = 'mytime.server';
-const K_TOKEN = 'mytime.token';
-const K_AUTOBACKUP = 'mytime.autobackup';
-const K_LASTSYNC = 'mytime.lastSyncAt';
+const K_SERVER = 'myevent.server';
+const K_TOKEN = 'myevent.token';
+const K_AUTOBACKUP = 'myevent.autobackup';
+const K_LASTSYNC = 'myevent.lastSyncAt';
+
+// 旧版（MyTime 时期）key 的一次性读取迁移：读到旧值则写入新 key 并清掉旧 key
+const LEGACY = {
+  'myevent.server': 'mytime.server',
+  'myevent.token': 'mytime.token',
+  'myevent.autobackup': 'mytime.autobackup',
+  'myevent.lastSyncAt': 'mytime.lastSyncAt',
+};
+export function migrateLegacyKeys() {
+  for (const [next, old] of Object.entries(LEGACY)) {
+    if (safe.get(next) == null) {
+      const v = safe.get(old);
+      if (v != null) {
+        safe.set(next, v);
+        safe.del(old);
+      }
+    }
+  }
+}
 
 export const getServerUrl = () => safe.get(K_SERVER) || '';
 export const setServerUrl = (v) => (v ? safe.set(K_SERVER, v) : safe.del(K_SERVER));

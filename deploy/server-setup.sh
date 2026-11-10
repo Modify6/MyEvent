@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# MyTime server-side one-shot setup (run ON THE VPS as root):
-#   bash /opt/mytime/deploy/server-setup.sh
+# MyEvent server-side one-shot setup (run ON THE VPS as root):
+#   bash /opt/myevent/deploy/server-setup.sh
 # Installs Node 22 + Caddy, builds the app, installs systemd service,
 # generates a strong MYEVENT_PASSWORD automatically, and prints it ONCE.
 set -euo pipefail
 
-APP_DIR=/opt/mytime
+APP_DIR=/opt/myevent
 ENV_FILE="$APP_DIR/server/.env"
 NODE_VER=22.14.0
 
@@ -51,10 +51,10 @@ if [ ! -f "$ENV_FILE" ]; then
   echo "PORT=${APP_PORT:-3128}" >> "$ENV_FILE"
   [ -n "${ALLOWED_ORIGIN:-}" ] && echo "ALLOWED_ORIGIN=$ALLOWED_ORIGIN" >> "$ENV_FILE"
 fi
-install -m 644 "$APP_DIR/deploy/mytime.service" /etc/systemd/system/mytime.service
+install -m 644 "$APP_DIR/deploy/myevent.service" /etc/systemd/system/myevent.service
 systemctl daemon-reload
-systemctl enable --now mytime
-systemctl restart mytime
+systemctl enable --now myevent
+systemctl restart myevent
 
 if [ -n "${DOMAIN:-}" ]; then
   echo "== [5/6] Caddy reverse proxy (HTTPS) =="
@@ -74,7 +74,7 @@ fi
 echo "== [6/6] Health check =="
 sleep 2
 curl -fsS "http://127.0.0.1:${APP_PORT:-3128}/api/health" >/dev/null && echo "local health: OK"
-systemctl is-active mytime
+systemctl is-active myevent
 [ -n "${DOMAIN:-}" ] && systemctl is-active caddy
 
 echo

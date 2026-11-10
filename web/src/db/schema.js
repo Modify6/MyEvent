@@ -1,5 +1,5 @@
 // MyEvent 数据库 schema：认知复盘领域（对象/事件/想法/预判/规则）+ 平台表
-// 通用字段约定（全表必带）：id / createdAt / updatedAt / deleted / serverRev
+// 通用字段约定（全表必带）：id / createdAt / updatedAt / deleted / serverRev（继承自 MyTime 架构约定）
 // JSON 列（数组/对象）本地存原生结构，同步序列化见 repo.js 的 JSON_COLS
 import Dexie from 'dexie';
 
@@ -38,7 +38,7 @@ db.version(2)
   );
 
 // 供 E2E 数据库级断言（Playwright）
-if (typeof window !== 'undefined') window.__mytimeDebug = { db };
+if (typeof window !== 'undefined') window.__myeventDebug = { db };
 
 export { db };
 
