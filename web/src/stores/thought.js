@@ -47,7 +47,7 @@ export const useThoughtStore = defineStore('thought', {
       return row;
     },
     // 二次修改:新值生效,旧值存入 edits 修订历史(改变要有记录)
-    async edit(id, { content, kind, at, subjectId, relatedEventId }) {
+    async edit(id, { content, kind, at, subjectId, relatedEventId, source }) {
       const t = this.byId(id);
       if (!t) throw new Error('记录不存在');
       const text = String(content ?? t.content).trim();
@@ -59,6 +59,7 @@ export const useThoughtStore = defineStore('thought', {
         at: at ?? t.at,
         subjectId: subjectId !== undefined ? subjectId : t.subjectId,
         relatedEventId: relatedEventId !== undefined ? relatedEventId : t.relatedEventId,
+        source: source !== undefined ? source : t.source,
         edits: [...(t.edits || []), { at: Date.now(), content: t.content, kind: t.kind, source: t.source || '' }],
       };
       await putRow('thoughts', next);

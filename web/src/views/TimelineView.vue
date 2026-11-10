@@ -80,12 +80,34 @@ const groups = computed(() => {
 const subjectName = (id) => subjectStore.nameOf(id);
 const eventTitle = (id) => eventStore.byId(id)?.title || '线索';
 
-// 二次修改:左滑编辑/删除;旧值自动存入修订历史
+// 二次修改:点击=编辑,长按=操作菜单(编辑/删除);旧值自动存入修订历史
 const showEditor = ref(false);
 const editItem = ref(null);
+const showActions = ref(false);
+let pressTimer = null;
+let pressFired = false;
 function openEdit(it) {
   editItem.value = it;
   showEditor.value = true;
+}
+function startPress(it) {
+  pressFired = false;
+  clearTimeout(pressTimer);
+  pressTimer = setTimeout(() => {
+    pressFired = true;
+    editItem.value = it;
+    showActions.value = true;
+  }, 550);
+}
+function cancelPress() {
+  clearTimeout(pressTimer);
+}
+function onItemClick(it) {
+  if (pressFired) {
+    pressFired = false;
+    return; // 长按已处理,吞掉紧随的 click
+  }
+  openEdit(it);
 }
 async function removeItem(it) {
   if (it.type === 't') await thoughtStore.remove(it.raw.id);
@@ -143,12 +165,16 @@ async function removeItem(it) {
     <template v-for="[label, list] in groups" :key="label">
       <div class="section-title">{{ label }} · {{ list.length }}</div>
       <div class="card">
-        <van-swipe-cell v-for="it in list" :key="it.key">
-          <template #right>
-            <van-button square type="primary" text="编辑" class="swipe-btn" @click="openEdit(it)" />
-            <van-button square type="danger" text="删除" class="swipe-btn" @click="removeItem(it)" />
-          </template>
-          <div class="feed-item" :class="{ summary: it.summary }">
+        <div v-for="it in list" :key="it.key">
+          <div
+            class="feed-item"
+            :class="{ summary: it.summary }"
+            @click="onItemClick(it)"
+            @touchstart.passive="startPress(it)"
+            @touchmove.passive="cancelPress"
+            @touchend="cancelPress"
+            @contextmenu.prevent
+          >
             <div class="feed-kind" :class="{ 'k-summary': it.summary }">{{ it.kind }}</div>
             <div class="row-main">
               <div class="feed-text">{{ it.content }}</div>
@@ -158,12 +184,12 @@ async function removeItem(it) {
                 <template v-if="it.trigger"> · {{ it.trigger }}</template>
               </div>
               <div class="feed-chips">
-                <span v-if="it.eventId" class="chip" @click="router.push(`/events/${it.eventId}`)"># {{ eventTitle(it.eventId) }}</span>
-                <span v-if="it.subjectId" class="chip" @click="router.push(`/subjects/${it.subjectId}`)">@ {{ subjectName(it.subjectId) }}</span>
+                <span v-if="it.eventId" class="chip" @click.stop="router.push(`/events/${it.eventId}`)"># {{ eventTitle(it.eventId) }}</span>
+                <span v-if="it.subjectId" class="chip" @click.stop="router.push(`/subjects/${it.subjectId}`)">@ {{ subjectName(it.subjectId) }}</span>
               </div>
             </div>
           </div>
-        </van-swipe-cell>
+        </div>
       </div>
     </template>
     <div v-if="!feed.length" class="card">
@@ -171,6 +197,17 @@ async function removeItem(it) {
     </div>
 
     <NoteEditor v-model:show="showEditor" :thought="editItem?.type === 't' ? editItem.raw : null" :entry="editItem?.type === 'e' ? editItem.raw : null" @saved="editItem = null" />
+
+    <van-action-sheet
+      v-model:show="showActions"
+      :actions="[
+        { name: '编辑', key: 'edit' },
+        { name: '删除', key: 'remove', color: 'var(--danger)' },
+      ]"
+      cancel-text="取消"
+      close-on-click-action
+      @select="(a) => (a.key === 'edit' ? openEdit(editItem) : removeItem(editItem))"
+    />
   </div>
 </template>
 
@@ -192,6 +229,5 @@ async function removeItem(it) {
 .feed-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .feed-chips { margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; }
 .feed-chips .chip { cursor: pointer; }
-.swipe-btn { height: 100%; }
-.feed-item :deep(.van-swipe-cell__wrapper) { overflow: hidden; }
+.feed-item { cursor: pointer; -webkit-user-select: none; user-select: none; }
 </style>

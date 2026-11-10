@@ -42,12 +42,34 @@ const timeline = computed(() => {
   return items.sort((a, b) => b.at - a.at);
 });
 
-// 二次修改:左滑编辑/删除;旧值自动存入修订历史
+// 二次修改:点击=编辑,长按=操作菜单(编辑/删除);旧值自动存入修订历史
 const showEditor = ref(false);
 const editItem = ref(null);
+const showActions = ref(false);
+let pressTimer = null;
+let pressFired = false;
 function openEdit(it) {
   editItem.value = it;
   showEditor.value = true;
+}
+function startPress(it) {
+  pressFired = false;
+  clearTimeout(pressTimer);
+  pressTimer = setTimeout(() => {
+    pressFired = true;
+    editItem.value = it;
+    showActions.value = true;
+  }, 550);
+}
+function cancelPress() {
+  clearTimeout(pressTimer);
+}
+function onItemClick(it) {
+  if (pressFired) {
+    pressFired = false;
+    return;
+  }
+  openEdit(it);
 }
 async function removeItem(it) {
   if (it.type === 't') await thoughtStore.remove(it.raw.id);
@@ -93,12 +115,16 @@ async function removeThread() {
 
     <div class="section-title">过程时间线</div>
     <div class="card" v-if="timeline.length">
-      <van-swipe-cell v-for="it in timeline" :key="it.key">
-        <template #right>
-          <van-button square type="primary" text="编辑" class="swipe-btn" @click="openEdit(it)" />
-          <van-button square type="danger" text="删除" class="swipe-btn" @click="removeItem(it)" />
-        </template>
-        <div class="tl-item" :class="{ summary: it.summary }">
+      <div v-for="it in timeline" :key="it.key">
+        <div
+          class="tl-item"
+          :class="{ summary: it.summary }"
+          @click="onItemClick(it)"
+          @touchstart.passive="startPress(it)"
+          @touchmove.passive="cancelPress"
+          @touchend="cancelPress"
+          @contextmenu.prevent
+        >
           <div class="tl-kind" :class="{ 'k-summary': it.summary }">{{ it.kind }}</div>
           <div class="row-main">
             <div class="tl-text">{{ it.content }}</div>
@@ -109,13 +135,24 @@ async function removeThread() {
             </div>
           </div>
         </div>
-      </van-swipe-cell>
+      </div>
     </div>
     <div v-else class="card"><div class="empty-tip">还没有过程记录 —— 点「记一笔」开始记录变化过程</div></div>
 
     <NoteComposer v-model:show="showNote" :event-id="eid" />
     <NoteComposer v-model:show="showSummary" :event-id="eid" summary-mode />
     <NoteEditor v-model:show="showEditor" :thought="editItem?.type === 't' ? editItem.raw : null" :entry="editItem?.type === 'e' ? editItem.raw : null" @saved="editItem = null" />
+
+    <van-action-sheet
+      v-model:show="showActions"
+      :actions="[
+        { name: '编辑', key: 'edit' },
+        { name: '删除', key: 'remove', color: 'var(--danger)' },
+      ]"
+      cancel-text="取消"
+      close-on-click-action
+      @select="(a) => (a.key === 'edit' ? openEdit(editItem) : removeItem(editItem))"
+    />
   </div>
   <div v-else class="page"><div class="card"><div class="empty-tip">线索不存在或已删除</div></div></div>
 </template>
@@ -136,5 +173,5 @@ async function removeThread() {
 .row-main { flex: 1; min-width: 0; }
 .tl-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .tl-item .van-icon { cursor: pointer; margin-top: 3px; flex: none; }
-.swipe-btn { height: 100%; }
+.tl-item { cursor: pointer; -webkit-user-select: none; user-select: none; }
 </style>
