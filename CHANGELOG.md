@@ -2,7 +2,7 @@
 
 所有对外可感知的变化都记录在此。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
-## [0.2.2] - 2026-11-10
+## [0.2.3] - 2026-11-10
 
 领域层从 MyTime「时间账本」重构为**个人认知复盘系统**（P0 全量）；安卓应用身份改名 MyEvent（com.myevent.app）。
 
