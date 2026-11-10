@@ -10,19 +10,19 @@ cd "$(dirname "$0")/.."
 # shellcheck disable=SC1091
 source deploy/config
 : "${SERVER_HOST:?SERVER_HOST 未设置}" "${SERVER_USER:?SERVER_USER 未设置}" "${SERVER_PORT:?SERVER_PORT 未设置}"
-: "${DOMAIN:?DOMAIN 未设置}"
+# DOMAIN 为空 = HTTP 模式（http://SERVER_HOST:APP_PORT）；填写 = HTTPS（Caddy 自动签证书）
 
 echo "== 上传代码到 $SERVER_USER@$SERVER_HOST:/opt/myevent =="
 # SSH 解析：Git Bash(MSYS) 对 Windows 盘上的私钥收紧不了权限，OpenSSH 会拒载私钥
 # （表现为 Server accepts key 却签名失败）——优先用 Windows 自带 OpenSSH（按 ACL 校验）
-# 部署密钥：.ssh-key/id_ed25519（v4，无口令；服务器端在 root 的 authorized_keys）
+# 部署密钥：deploy/.ssh-key/id_ed25519（v4，无口令；服务器端在 root 的 authorized_keys）
 if [ -x "/c/Windows/System32/OpenSSH/ssh.exe" ]; then
   SSH_CMD="/c/Windows/System32/OpenSSH/ssh.exe"
-  KEY_WIN=$(cygpath -m "$PWD/.ssh-key/id_ed25519")
+  KEY_WIN=$(cygpath -m "$PWD/deploy/.ssh-key/id_ed25519")
   SSH_OPTS=(-i "$KEY_WIN" -o IdentitiesOnly=yes)
 else
   SSH_CMD="ssh"
-  SSH_OPTS=(-i "$PWD/.ssh-key/id_ed25519" -o IdentitiesOnly=yes)
+  SSH_OPTS=(-i "$PWD/deploy/.ssh-key/id_ed25519" -o IdentitiesOnly=yes)
 fi
 
 # tar over ssh（Windows Git Bash 无 rsync）；排除依赖/构建产物/数据/敏感文件
@@ -37,6 +37,9 @@ tar -czf - \
   --exclude=./app/android \
   --exclude=./server/data \
   --exclude=./server/data-backup \
+  --exclude=./deploy/.ssh-key \
+  --exclude=./*.apk \
+  --exclude=./.zcode \
   --exclude=./.debug-state.json \
   --exclude=./.apk-version \
   . | "$SSH_CMD" "${SSH_OPTS[@]}" -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" \
@@ -47,5 +50,11 @@ echo "== 远端执行 server-setup.sh（装 Node/Caddy、构建、systemd、Cadd
   "cd /opt/myevent && sudo DOMAIN='$DOMAIN' APP_PORT='${APP_PORT:-3129}' bash deploy/server-setup.sh"
 
 echo
-echo "部署完成。验证: https://$DOMAIN/api/health"
-echo "App 设置页服务器地址填 https://$DOMAIN ，密码为部署时打印的 MYEVENT_PASSWORD。"
+if [ -n "$DOMAIN" ]; then
+  echo "部署完成。验证: https://$DOMAIN/api/health"
+  echo "App 设置页服务器地址填 https://$DOMAIN ，密码为部署时打印的 MYEVENT_PASSWORD。"
+else
+  echo "部署完成（HTTP 模式）。验证: http://$SERVER_HOST:${APP_PORT:-3129}/api/health"
+  echo "注意：需在阿里云控制台安全组放行 ${APP_PORT:-3129} 端口，外部才能访问。"
+  echo "App 设置页服务器地址填 http://$SERVER_HOST:${APP_PORT:-3129} ，密码为部署时打印的 MYEVENT_PASSWORD。"
+fi

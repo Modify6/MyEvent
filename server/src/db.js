@@ -113,7 +113,7 @@ function seedDefaultScenes(db) {
     ['cat-other', '其他', '#98a2b3'],
   ];
   const ins = db.prepare(
-    'INSERT INTO categories (id, name, color, sort, createdAt, updatedAt, deleted, serverRev) VALUES (?, ?, ?, 0, ?, ?, 0, 0)'
+    'INSERT INTO categories (id, name, color, sort, createdAt, updatedAt, deleted, serverRev) VALUES (?, ?, ?, ?, ?, ?, 0, 0)'
   );
   defaults.forEach(([id, name, color], i) => ins.run(id, name, color, i, now, now));
   console.log('已写入默认场景标签');

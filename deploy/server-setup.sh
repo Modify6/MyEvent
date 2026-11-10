@@ -58,11 +58,14 @@ systemctl restart myevent
 
 if [ -n "${DOMAIN:-}" ]; then
   echo "== [5/6] Caddy reverse proxy (HTTPS) =="
-  cat > /etc/caddy/Caddyfile <<EOF
-$DOMAIN {
-    reverse_proxy 127.0.0.1:${APP_PORT:-3129}
+  # 幂等追加站点块,不覆盖已有 Caddyfile —— 同一台服务器可与 MyTime 等其他站点共存
+  if ! grep -qs "^$DOMAIN {" /etc/caddy/Caddyfile; then
+    printf '
+%s {
+    reverse_proxy 127.0.0.1:%s
 }
-EOF
+' "$DOMAIN" "${APP_PORT:-3129}" >> /etc/caddy/Caddyfile
+  fi
   systemctl enable --now caddy
   systemctl restart caddy
 else
