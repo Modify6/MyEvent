@@ -6,6 +6,7 @@ import { showFailToast, showSuccessToast } from 'vant';
 import { useEventStore } from '../stores/event.js';
 import { useSubjectStore } from '../stores/subject.js';
 import { SUBJECT_TYPES } from '../lib/domain.js';
+import AttachGuide from './AttachGuide.vue';
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -28,6 +29,7 @@ watch(
 );
 
 const isEvent = () => props.type === 'event';
+const showGuide = ref(false);
 
 async function create() {
   try {
@@ -52,8 +54,12 @@ async function create() {
     <div class="popup-safe form-wrap">
       <div class="pop-head">
         <span>快速新建{{ isEvent() ? '线索' : '对象' }}</span>
-        <van-button size="small" plain round @click="emit('update:show', false)">关闭</van-button>
+        <span class="head-right">
+          <span class="guide-link" @click="showGuide = true">怎么选?</span>
+          <van-button size="small" plain round @click="emit('update:show', false)">关闭</van-button>
+        </span>
       </div>
+      <div class="reco">{{ isEvent() ? '适合:马上要推进的具体事情(一轮重构 / 一次谈判 / 一个决策)' : '适合:长期关注的主体(一个项目 / 一个人 / 一家公司 / 一个主题)' }}</div>
       <van-field
         v-model="form.name"
         :placeholder="isEvent() ? '线索标题,如:XX项目评估' : '对象名称,如:老张 / A公司'"
@@ -66,6 +72,7 @@ async function create() {
         </div>
       </template>
       <van-button type="primary" round block style="margin-top: 14px" @click="create">创建并挂靠</van-button>
+      <AttachGuide v-model:show="showGuide" />
     </div>
   </van-popup>
 </template>
@@ -73,6 +80,9 @@ async function create() {
 <style scoped>
 .form-wrap { padding: 18px 14px 6px; display: flex; flex-direction: column; }
 .pop-head { display: flex; align-items: center; justify-content: space-between; font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+.head-right { display: flex; align-items: center; gap: 12px; font-weight: 400; }
+.guide-link { color: var(--brand); cursor: pointer; font-size: 12px; }
+.reco { font-size: 12px; color: var(--text-2); background: var(--card-2); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
 .block-label { font-size: 12px; color: var(--text-3); margin: 12px 2px 6px; }
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 2px; }
 .tag-chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 13px; font-size: 12px; color: var(--text-2); }

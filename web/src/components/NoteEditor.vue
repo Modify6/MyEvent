@@ -7,6 +7,7 @@ import { useEventStore } from '../stores/event.js';
 import { useThoughtStore } from '../stores/thought.js';
 import { useSubjectStore } from '../stores/subject.js';
 import QuickCreate from './QuickCreate.vue';
+import AttachGuide from './AttachGuide.vue';
 import { TRIGGER_KINDS, THOUGHT_KINDS } from '../lib/domain.js';
 import { toLocalInput, fromLocalInput } from '../lib/time.js';
 
@@ -84,6 +85,7 @@ function onQuickCreated(row) {
   if (quickCreateType.value === 'event') form.eventId = row.id;
   else form.subjectId = row.id;
 }
+const showGuide = ref(false);
 
 async function save() {
   try {
@@ -140,12 +142,15 @@ async function save() {
 
       <!-- 挂靠:与创建细节对齐(thought 可改挂对象/线索;entry 属于其线索不可改) -->
       <template v-if="!isEntry()">
-        <div class="block-label">挂到线索</div>
+        <div class="block-label row-between">
+          <span>挂到线索 · 哪件事</span>
+          <span class="guide-link" @click="showGuide = true">怎么选?</span>
+        </div>
         <div class="chip-row">
           <button v-for="e in eventStore.threads.slice(0, 8)" :key="e.id" class="tag-chip" :class="{ active: form.eventId === e.id }" @click="form.eventId = form.eventId === e.id ? '' : e.id">{{ e.title.slice(0, 12) }}</button>
           <button class="tag-chip add-chip" @click="quickCreate('event')">+ 新建</button>
         </div>
-        <div class="block-label">挂到对象</div>
+        <div class="block-label">挂到对象 · 关于谁</div>
         <div class="chip-row">
           <button v-for="s in subjectStore.active" :key="s.id" class="tag-chip" :class="{ active: form.subjectId === s.id }" @click="form.subjectId = form.subjectId === s.id ? '' : s.id">{{ s.name }}</button>
           <button class="tag-chip add-chip" @click="quickCreate('subject')">+ 新建</button>
@@ -168,6 +173,7 @@ async function save() {
 
       <van-button type="primary" round block style="margin-top: 14px" @click="save">保存修改</van-button>
       <QuickCreate v-model:show="showQuickCreate" :type="quickCreateType" @created="onQuickCreated" />
+      <AttachGuide v-model:show="showGuide" />
     </div>
   </van-popup>
 </template>
@@ -181,6 +187,7 @@ async function save() {
 .tag-chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 13px; font-size: 12px; color: var(--text-2); }
 .tag-chip.active { border-color: var(--brand); color: var(--brand); font-weight: 600; background: color-mix(in srgb, var(--brand) 8%, transparent); }
 .add-chip { border-style: dashed; color: var(--text-3); }
+.guide-link { color: var(--brand); cursor: pointer; font-size: 12px; }
 .history-box { background: var(--card-2); border-radius: 8px; padding: 10px; }
 .history-item { padding: 6px 0; border-bottom: 1px dashed var(--line); }
 .history-item:last-child { border-bottom: 0; }
