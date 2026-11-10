@@ -4,11 +4,12 @@ android {
     namespace "com.mytime.app"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.mytime.app"
+        // appId 已改名 MyEvent：applicationId 变更为 com.myevent.app（namespace/Java 包保留，避免大规模重命名）
+        applicationId "com.myevent.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1302
-        versionName "0.13.2"
+        versionCode 200
+        versionName "0.2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

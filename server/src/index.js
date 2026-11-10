@@ -1,4 +1,4 @@
-// MyTime 同步服务：鉴权 + 增量同步 + 数据导出 + 生产模式下静态托管 web/dist
+// MyEvent 同步服务：鉴权 + 增量同步 + 数据导出 + 生产模式下静态托管 web/dist
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
@@ -110,7 +110,7 @@ const lanIps = Object.values(nets)
   .flat()
   .filter((n) => n && n.family === 'IPv4' && !n.internal)
   .map((n) => n.address);
-console.log(`MyTime 同步服务已启动:`);
+console.log(`MyEvent 同步服务已启动:`);
 console.log(`  本机访问   http://localhost:${PORT}`);
 if (lanIps.length) console.log(`  手机访问   http://${lanIps[0]}:${PORT}  (同一局域网)`);
 console.log(`  访问密码   ${PASSWORD}${process.env.MYEVENT_PASSWORD ? '' : '  (默认值，可用环境变量 MYEVENT_PASSWORD 修改)'}`);

@@ -19,7 +19,7 @@ const run = (cmd, args, opts = {}) => {
   return r;
 };
 
-console.log('== MyTime APK 打包 ==\n');
+console.log('== MyEvent APK 打包 ==\n');
 
 // —— 工具链定位：工作文件夹 toolchain（随迁移携带）→ 本机标准位置（旧安装）→ 自举下载 ——
 let TC_JDK = null, TC_SDK = null;
@@ -108,7 +108,7 @@ run('cmd.exe', ['/c', 'gradlew.bat', 'assembleDebug'], { cwd: androidDir, env, l
 const apkVer = JSON.parse(fs.readFileSync(path.join(ROOT, 'web', 'package.json'), 'utf8')).version;
 const apkSrc = path.join(androidDir, 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
 if (!fs.existsSync(apkSrc)) die(`打包完成但未找到产物：${apkSrc}`);
-fs.copyFileSync(apkSrc, path.join(ROOT, `MyTime-v${apkVer}.apk`));
-fs.copyFileSync(apkSrc, path.join(ROOT, 'MyTime.apk'));
-console.log(`\n== 完成！== MyTime-v${apkVer}.apk 已输出到项目根目录（${(fs.statSync(apkSrc).size / 1024 / 1024).toFixed(1)} MB）`);
+fs.copyFileSync(apkSrc, path.join(ROOT, `MyEvent-v${apkVer}.apk`));
+fs.copyFileSync(apkSrc, path.join(ROOT, `MyEvent.apk`));
+console.log(`\n== 完成！== MyEvent-v${apkVer}.apk 已输出到项目根目录（${(fs.statSync(apkSrc).size / 1024 / 1024).toFixed(1)} MB）`);
 console.log('传到安卓手机直接安装（需允许"安装未知应用"），打开后在设置里填电脑地址与密码即可同步。');

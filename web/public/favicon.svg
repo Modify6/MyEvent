@@ -1,1 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#4F6EF7"/><circle cx="32" cy="34" r="16" fill="none" stroke="#fff" stroke-width="4.5"/><path d="M32 34V23M32 34l8 5" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><circle cx="32" cy="34" r="2.5" fill="#fff"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4F6EF7"/>
+      <stop offset="1" stop-color="#7C4DFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#g)"/>
+  <!-- 校准环:约 300°,缺口中心在顶部偏右 18°(与 pnglib calibrationMark 几何一致) -->
+  <circle cx="32" cy="33.5" r="17.3" fill="none" stroke="#fff" stroke-width="3.6"
+    stroke-dasharray="86.9 21.7" stroke-linecap="round" transform="rotate(-36 32 33.5)"/>
+  <!-- 游标点:缺口顺时针末端(54° 方向) -->
+  <circle cx="45.98" cy="23.34" r="4" fill="#fff"/>
+  <!-- 中心观点点 -->
+  <circle cx="32" cy="33.5" r="3.8" fill="#fff"/>
+</svg>

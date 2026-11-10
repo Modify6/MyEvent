@@ -1,4 +1,6 @@
-// 零依赖 PNG 编码 + 时钟图标绘制（网页 PWA 与安卓启动图标共用）
+// 零依赖 PNG 编码 + 校准环图标绘制（网页 PWA 与安卓启动图标共用）
+// 图标隐喻（认知复盘）：白色缺口圆环 = 围绕判断的持续校准循环，缺口 = 待验证的开放问题，
+// 中心点 = 当前的观点，环端游标点 = 正在逼近（或偏离）事实的判断位置。
 // 几何全部用归一化坐标 [0,1]，任意分辨率等比渲染
 import { deflateSync } from 'node:zlib';
 
@@ -50,13 +52,6 @@ export function encodePNG(width, height, rgba) {
 }
 
 // ---------- 图标几何（归一化坐标） ----------
-function distToSeg(px, py, ax, ay, bx, by) {
-  const abx = bx - ax;
-  const aby = by - ay;
-  const t = Math.max(0, Math.min(1, ((px - ax) * abx + (py - ay) * aby) / (abx * abx + aby * aby)));
-  return Math.hypot(px - (ax + abx * t), py - (ay + aby * t));
-}
-
 const GRAD = { from: [79, 110, 247], to: [124, 77, 255] }; // #4F6EF7 -> #7C4DFF
 
 function bgGradient(v) {
@@ -68,25 +63,27 @@ function bgGradient(v) {
   ];
 }
 
-function whiteClock(u, v, cx, cy, ringR, ringW, handW, minuteLen, hourLen, dotR) {
+// 校准环：约 300° 白环（缺口中心在正上顺时针 18°，即顶部偏右）+ 中心观点点 + 环端游标点
+function calibrationMark(u, v, cx, cy, ringR, ringW, dotR, cursorR) {
   const d = Math.hypot(u - cx, v - cy);
-  if (Math.abs(d - ringR) <= ringW / 2) return true;
-  const ang = Math.PI / 3; // 10:10 经典指针角度
-  const mTip = [cx + Math.sin(ang) * minuteLen, cy - Math.cos(ang) * minuteLen];
-  const hTip = [cx - Math.sin(ang) * hourLen, cy - Math.cos(ang) * hourLen];
-  if (distToSeg(u, v, cx, cy, mTip[0], mTip[1]) <= handW) return true;
-  if (distToSeg(u, v, cx, cy, hTip[0], hTip[1]) <= handW) return true;
-  return d <= dotR;
+  // 角度：0 = 正上，顺时针为正；缺口 [-18°, 54°]
+  const ang = ((Math.atan2(u - cx, cy - v) * 180) / Math.PI + 360) % 360;
+  const inGap = ang < 54 || ang > 342;
+  if (Math.abs(d - ringR) <= ringW / 2 && !inGap) return true;
+  // 游标点：缺口顺时针末端（54° 方向、环半径处）
+  const a = (54 * Math.PI) / 180;
+  if (Math.hypot(u - (cx + Math.sin(a) * ringR), v - (cy - Math.cos(a) * ringR)) <= cursorR) return true;
+  return d <= dotR; // 中心观点点
 }
 
 // style:
-//  rounded    渐变圆角方块 + 白钟（PWA 图标）
-//  maskable   渐变全出血方块 + 缩小的白钟（PWA maskable / iOS）
-//  gradient   渐变全出血方块 + 常规白钟（安卓自适应图标背景层）
-//  foreground 透明底 + 白钟（安卓自适应图标前景层，需留在安全区内）
+//  rounded    渐变圆角方块 + 白色校准环（PWA 图标 / 安卓常规启动图标）
+//  maskable   渐变全出血方块 + 缩小的校准环（PWA maskable / iOS）
+//  gradient   渐变全出血方块，无图形（安卓自适应图标背景层）
+//  foreground 透明底 + 缩小的校准环（安卓自适应图标前景层，需留在安全区内）
 function sampleIcon(u, v, style) {
   if (style === 'foreground') {
-    const hit = whiteClock(u, v, 0.5, 0.52, 0.2, 0.044, 0.032, 0.125, 0.095, 0.026);
+    const hit = calibrationMark(u, v, 0.5, 0.52, 0.19, 0.042, 0.045, 0.047);
     return hit ? [255, 255, 255, 255] : [0, 0, 0, 0];
   }
   const base = bgGradient(v);
@@ -96,19 +93,9 @@ function sampleIcon(u, v, style) {
     const ny = Math.max(rad, Math.min(1 - rad, v));
     if (Math.hypot(u - nx, v - ny) > rad) return [0, 0, 0, 0];
   }
+  if (style === 'gradient') return [...base, 255];
   const shrink = style === 'maskable' ? 0.72 : 1;
-  const hit = whiteClock(
-    u,
-    v,
-    0.5,
-    0.523 * (style === 'maskable' ? 0.97 : 1),
-    0.293 * shrink,
-    0.0664 * shrink,
-    0.0508 * shrink,
-    0.186 * shrink,
-    0.141 * shrink,
-    0.039 * shrink
-  );
+  const hit = calibrationMark(u, v, 0.5, 0.523, 0.27 * shrink, 0.056 * shrink, 0.06 * shrink, 0.062 * shrink);
   return hit ? [255, 255, 255, 255] : [...base, 255];
 }
 

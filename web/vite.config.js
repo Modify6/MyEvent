@@ -21,9 +21,9 @@ export default defineConfig({
       injectRegister: null,
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'MyEvent 事件账本',
+        name: 'MyEvent 认知复盘',
         short_name: 'MyEvent',
-        description: 'MyEvent 个人事件管理：记录事件的时间与地点，回顾时间流向',
+        description: 'MyEvent 个人认知复盘系统：以对象为中心记录事实与想法的演化，验证预判，沉淀可复用的经验规则',
         lang: 'zh-CN',
         start_url: '/',
         display: 'standalone',

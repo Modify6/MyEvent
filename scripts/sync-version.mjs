@@ -2,8 +2,12 @@
 // 同步到 app/android/app/build.gradle 的 versionName + versionCode（APK 设置里显示的就是它）
 // 用法：node scripts/sync-version.mjs（apk.bat 打包前自动执行）
 import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const pkg = JSON.parse(fs.readFileSync('E:/study/zi/MyTime/web/package.json', 'utf8'));
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'web/package.json'), 'utf8'));
 const version = pkg.version; // e.g. "0.2.0"
 if (!/^\d+\.\d+\.\d+$/.test(version)) {
   console.error(`版本号格式异常: ${version}`);
@@ -12,7 +16,7 @@ if (!/^\d+\.\d+\.\d+$/.test(version)) {
 const [major, minor, patch] = version.split('.').map(Number);
 const versionCode = major * 10000 + minor * 100 + patch;
 
-const gradlePath = 'E:/study/zi/MyTime/app/android/app/build.gradle';
+const gradlePath = path.join(ROOT, 'app/android/app/build.gradle');
 let gradle = fs.readFileSync(gradlePath, 'utf8');
 const before = gradle;
 gradle = gradle
@@ -25,5 +29,5 @@ if (gradle === before) {
   fs.writeFileSync(gradlePath, gradle);
   console.log(`版本已写入: versionName ${version} · versionCode ${versionCode}`);
 }
-// 供 apk.bat 读取，给打包产物命名（MyTime-v<版本>.apk）
-fs.writeFileSync('E:/study/zi/MyTime/.apk-version', version);
+// 供打包脚本读取，给打包产物命名（MyEvent-v<版本>.apk）
+fs.writeFileSync(path.join(ROOT, '.apk-version'), version);

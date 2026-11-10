@@ -1,6 +1,6 @@
 {
   "name": "myevent-web",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -32,5 +32,5 @@
   "allowScripts": {
     "esbuild@0.28.2": true
   },
-  "description": "MyEvent 个人事件管理：记录事件的时间与地点"
+  "description": "MyEvent 个人认知复盘系统：对象 / 事件复盘 / 想法 / 预判验证 / 经验规则"
 }

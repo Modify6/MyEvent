@@ -47,9 +47,15 @@ async function enqueue(table, row) {
   } catch {}
 }
 
+// Vue reactive Proxy 无法被 IndexedDB structuredClone（store 里读出的行是深层代理）。
+// 字段均为可序列化标量/数组/对象，JSON 往返是安全的纯化方式。
+function toPlain(row) {
+  return row == null || typeof row !== 'object' ? row : JSON.parse(JSON.stringify(row));
+}
+
 // 本地编辑：盖当前时间戳并待同步
 export async function putRow(table, row) {
-  const r = { ...row, updatedAt: Date.now(), deleted: row.deleted ? 1 : 0 };
+  const r = toPlain({ ...row, updatedAt: Date.now(), deleted: row.deleted ? 1 : 0 });
   await tableOf(table).put(r);
   await enqueue(table, r);
   bump();
@@ -62,12 +68,55 @@ export async function softDelete(table, id) {
   await putRow(table, { ...row, deleted: 1 });
 }
 
+// —— JSON 列同步规范化 ——
+// 本地以原生数组/对象存储；服务端 SQLite 以 JSON 字符串列存储（server/src/db.js JSON_COLS）。
+// 拉取/导入的行在采纳前反序列化回来；失败或空值回落到该列的空态。
+const JSON_DEFAULTS = {
+  subjectIds: [],
+  review: null,
+  tags: [],
+  topReasons: [],
+  basis: null,
+  criteria: null,
+  result: null,
+  lockSnapshot: null,
+  refEvents: [],
+  refPredictions: [],
+};
+
+export const JSON_COLS = {
+  events: ['subjectIds', 'review'],
+  subjects: ['tags', 'topReasons'],
+  thoughts: [],
+  predictions: ['basis', 'criteria', 'result', 'lockSnapshot'],
+  rules: ['refEvents', 'refPredictions'],
+};
+
+export function normalizeRow(table, row) {
+  const cols = JSON_COLS[table];
+  if (!cols || !row) return row;
+  const r = { ...row };
+  for (const c of cols) {
+    const v = r[c];
+    if (typeof v === 'string') {
+      try {
+        r[c] = JSON.parse(v);
+      } catch {
+        r[c] = JSON_DEFAULTS[c] ?? null;
+      }
+    } else if (v == null) {
+      r[c] = JSON_DEFAULTS[c] ?? null;
+    }
+  }
+  return r;
+}
+
 // 采纳一条远端/导入行（保留其 updatedAt 参与 LWW）；push=true 时推送（导入场景）
 export async function adoptRow(table, row, { push = false } = {}) {
   if (!row || !row.id) return false;
   const local = await tableOf(table).get(row.id);
   if (!shouldReplace(local, row)) return false;
-  const r = { ...row, deleted: row.deleted ? 1 : 0 };
+  const r = normalizeRow(table, { ...row, deleted: row.deleted ? 1 : 0 });
   await tableOf(table).put(r);
   if (push) await enqueue(table, r);
   bump();
@@ -76,18 +125,20 @@ export async function adoptRow(table, row, { push = false } = {}) {
 
 // —— 查询辅助（个人量级，内存过滤足够） ——
 export const getCategories = () => db.categories.toArray();
-export const getGoals = () => db.goals.toArray();
+export const getSubjects = () => db.subjects.toArray();
+export const getAllThoughts = () => db.thoughts.toArray();
+export const getAllPredictions = () => db.predictions.toArray();
+export const getAllRules = () => db.rules.toArray();
 
-// 事件归属其 startAt 所在时段
+export const getAllEvents = () => db.events.filter((e) => !e.deleted).toArray();
+
+// 事件归属其 startAt 所在时段（时间线按天分组用）
 export const getEventsBetween = (start, end) =>
   db.events
     .where('startAt')
     .between(start, end, true, true)
     .and((e) => !e.deleted)
     .toArray();
-
-export const getRunningEvents = () => db.events.filter((e) => !e.deleted && e.endAt == null).toArray();
-export const getAllEvents = () => db.events.filter((e) => !e.deleted).toArray();
 
 export async function getMeta(key, fallback = null) {
   const row = await db.meta.get(key);
@@ -98,34 +149,4 @@ export async function setMeta(key, value) {
   await db.meta.put({ key, value });
 }
 
-// —— 计划系统 ——
-
-// 首次启动播种默认分类（与服务器同 id，连接同步后会被服务端版本一致化）
-const DEFAULT_CATEGORIES = [
-  ['cat-sleep', '睡眠', '#7C4DFF'],
-  ['cat-meal', '餐饮', '#FF7043'],
-  ['cat-work', '工作', '#1E88E5'],
-  ['cat-study', '学习', '#43A047'],
-  ['cat-sport', '运动', '#00ACC1'],
-  ['cat-commute', '通勤', '#8D6E63'],
-  ['cat-fun', '娱乐', '#EC407A'],
-  ['cat-chores', '家务', '#F0A800'],
-  ['cat-other', '其他', '#90A4AE'],
-];
-
-export async function ensureSeed() {
-  const n = await db.categories.count();
-  if (n > 0) return;
-  const now = Date.now();
-  await db.categories.bulkPut(
-    DEFAULT_CATEGORIES.map(([id, name, color], i) => ({
-      id,
-      name,
-      color,
-      sort: i,
-      createdAt: now,
-      updatedAt: now,
-      deleted: 0,
-    }))
-  );
-}
+export { uuid };

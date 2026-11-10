@@ -1,6 +1,6 @@
-// MyEvent 数据库 schema：events（事件）+ categories（分类）
+// MyEvent 数据库 schema：认知复盘领域（对象/事件/想法/预判/规则）+ 平台表
 // 通用字段约定（全表必带）：id / createdAt / updatedAt / deleted / serverRev
-// 详见 docs/architecture.md §3
+// JSON 列（数组/对象）本地存原生结构，同步序列化见 repo.js 的 JSON_COLS
 import Dexie from 'dexie';
 
 const db = new Dexie('myevent');
@@ -14,19 +14,58 @@ db.version(1).stores({
   logs: '++id, at',
 });
 
+// v2：MyTime 计时领域 → 认知复盘领域
+// - events 语义扩展：关联对象（多值索引）/场景/一句话事实/复盘状态与内容
+// - 新增 subjects（对象）/ thoughts（想法）/ predictions（预判）/ rules（经验规则）
+db.version(2)
+  .stores({
+    events: 'id, categoryId, *subjectIds, status, startAt, endAt, reviewedAt, createdAt, updatedAt, deleted',
+    categories: 'id, name, updatedAt, deleted',
+    subjects: 'id, name, type, nextReviewAt, createdAt, updatedAt, deleted',
+    thoughts: 'id, subjectId, kind, state, at, createdAt, updatedAt, deleted',
+    predictions: 'id, subjectId, kind, status, windowEnd, verifiedAt, createdAt, updatedAt, deleted',
+    rules: 'id, validity, scene, createdAt, updatedAt, deleted',
+    outbox: '++seq, key',
+    meta: 'key',
+    logs: '++id, at',
+  })
+  .upgrade((tx) =>
+    // 存量计时事件补默认字段（视为待复盘进入收件箱）
+    tx.table('events').toCollection().modify((e) => {
+      if (!Array.isArray(e.subjectIds)) e.subjectIds = [];
+      if (!e.status) e.status = 'inbox';
+    })
+  );
+
 // 供 E2E 数据库级断言（Playwright）
 if (typeof window !== 'undefined') window.__mytimeDebug = { db };
 
 export { db };
 
-// 首启播种默认分类（全新离线用户的第一分钟就能用；连接服务端后 LWW 一致化）
+// 首启播种默认场景标签（与服务端 seedDefaultCategories 同 id 同名，连接同步后 LWW 一致化）
+const DEFAULT_SCENES = [
+  ['cat-work', '工作', '#4f6ef7'],
+  ['cat-people', '人际', '#34c273'],
+  ['cat-invest', '投资', '#f5a623'],
+  ['cat-learn', '学习', '#7c4dff'],
+  ['cat-decision', '决策', '#ee5a5a'],
+  ['cat-life', '生活', '#00b8d4'],
+  ['cat-other', '其他', '#98a2b3'],
+];
+
 export async function ensureSeed() {
   const n = await db.categories.count();
   if (n > 0) return;
-  await db.categories.bulkPut([
-    { id: 'cat-work', name: '工作', color: '#4f6ef7', createdAt: Date.now(), updatedAt: Date.now(), deleted: 0 },
-    { id: 'cat-life', name: '生活', color: '#34c273', createdAt: Date.now(), updatedAt: Date.now(), deleted: 0 },
-    { id: 'cat-learn', name: '学习', color: '#f5a623', createdAt: Date.now(), updatedAt: Date.now(), deleted: 0 },
-    { id: 'cat-other', name: '其他', color: '#98a2b3', createdAt: Date.now(), updatedAt: Date.now(), deleted: 0 },
-  ]);
+  const now = Date.now();
+  await db.categories.bulkPut(
+    DEFAULT_SCENES.map(([id, name, color], i) => ({
+      id,
+      name,
+      color,
+      sort: i,
+      createdAt: now,
+      updatedAt: now,
+      deleted: 0,
+    }))
+  );
 }

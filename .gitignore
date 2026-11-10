@@ -12,6 +12,7 @@ app/android/local.properties
 app/android/.idea/
 app/android/capacitor-cordova-android-plugins/
 MyTime.apk
+MyEvent.apk
 
 # ZCode 工具内部文件
 .zcode/
@@ -44,4 +45,5 @@ deploy/config
 .lastrun.json
 .debug-state.json
 MyTime-v*.apk
+MyEvent-v*.apk
 .apk-build-state.json

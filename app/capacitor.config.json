@@ -1,11 +1,7 @@
 {
-  "appId": "com.mytime.app",
-  "appName": "MyTime 时间账本",
+  "appId": "com.myevent.app",
+  "appName": "MyEvent",
   "webDir": "../web/dist",
-  "server": {
-    "cleartext": true
-  },
-  "android": {
-    "allowMixedContent": true
-  }
+  "server": { "cleartext": true },
+  "android": { "allowMixedContent": true }
 }
