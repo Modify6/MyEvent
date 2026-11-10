@@ -2,9 +2,11 @@
 // 用法：node scripts/release.mjs patch|minor|major|x.y.z   （默认 patch）
 // 流程：工作树检查 → 单元测试 → 版本号贯通 → CHANGELOG 自动生成 → 构建 → 提交 → 标签 → 推送（带重试）
 import fs from 'node:fs';
+import path from 'node:path';
 import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = 'E:/study/zi/MyTime';
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const run = (cmd, opts = {}) => execSync(cmd, { cwd: ROOT, stdio: 'inherit', ...opts });
 const capture = (cmd) => execSync(cmd, { cwd: ROOT, encoding: 'utf8' }).trim();
 
@@ -122,7 +124,11 @@ for (let i = 1; i <= 5; i++) {
 console.log('\n========== 发版完成 ==========');
 console.log(`版本: v${next}（versionCode ${next.split('.')[0] * 10000 + Number(next.split('.')[1]) * 100 + Number(next.split('.')[2])}）`);
 if (pushed) {
-  console.log(`GitHub: https://github.com/Modify6/MyTime/releases/tag/v${next}`);
+  let repoUrl = '';
+  try {
+    repoUrl = capture('git remote get-url origin').replace(/\.git$/, '').replace(/^git@github\.com:/, 'https://github.com/');
+  } catch {}
+  console.log(repoUrl ? `GitHub: ${repoUrl}/releases/tag/v${next}` : `GitHub: 标签 v${next} 已推送`);
   console.log('CI 将自动构建 APK 并挂到该 Release，几分钟后手机可直接下载。');
 } else {
   console.log('推送未成功（网络波动）：提交与标签已留在本地，网络恢复后执行 git push origin master --tags 即可。');

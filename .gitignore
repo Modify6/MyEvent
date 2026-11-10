@@ -47,3 +47,9 @@ deploy/config
 MyTime-v*.apk
 MyEvent-v*.apk
 .apk-build-state.json
+
+# 私人数据与个人开发工具（本地保留，绝不入库）
+server/data-backup/
+scripts/migrate-*.mjs
+scripts/patch-apk-bat*
+scripts/convert-*.ps1
