@@ -1,0 +1,173 @@
+<script setup>
+// 记录流首页:3 秒随手记(内容即可),全部记录按时间倒序混排(想法/事实/感想 + 线索过程记录)
+// 没有待办、没有必填 —— 重点是过程,持续记录,演化自然沉淀
+import { computed, reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { showFailToast, showSuccessToast } from 'vant';
+import dayjs from 'dayjs';
+import { useThoughtStore } from '../stores/thought.js';
+import { useEventStore } from '../stores/event.js';
+import { useSubjectStore } from '../stores/subject.js';
+import { THOUGHT_KINDS, TRIGGER_KINDS } from '../lib/domain.js';
+import { fmtTime } from '../lib/time.js';
+
+const router = useRouter();
+const thoughtStore = useThoughtStore();
+const eventStore = useEventStore();
+const subjectStore = useSubjectStore();
+
+// —— 快捷输入(内联,最快路径:内容 + 发送) ——
+const kind = ref('想法');
+const triggerKind = ref('');
+const detail = ref(false);
+const form = reactive({ content: '', triggerNote: '', subjectId: '', eventId: '' });
+
+async function quickSend() {
+  try {
+    const src = triggerKind.value
+      ? `由${triggerKind.value}触发${form.triggerNote ? ':' + form.triggerNote : ''}`
+      : form.triggerNote;
+    await thoughtStore.quickAdd({
+      content: form.content,
+      kind: kind.value,
+      subjectId: form.subjectId,
+      relatedEventId: form.eventId,
+      source: src,
+    });
+    form.content = '';
+    form.triggerNote = '';
+    showSuccessToast('已记录');
+  } catch (e) {
+    showFailToast(e.message);
+  }
+}
+
+// —— 统一记录时间线:thoughts(独立/挂对象/挂线索的随手记) + eventEntries(线索过程记录) ——
+const feed = computed(() => {
+  const items = [];
+  for (const t of thoughtStore.active) {
+    items.push({
+      key: 't:' + t.id, kind: t.kind, content: t.content, at: t.at,
+      trigger: t.source || '', summary: false,
+      subjectId: t.subjectId || '', eventId: t.relatedEventId || '',
+    });
+  }
+  for (const en of eventStore.entries) {
+    if (en.deleted) continue;
+    items.push({
+      key: 'e:' + en.id, kind: en.kind === 'summary' ? '小结' : '记录', content: en.content, at: en.at,
+      trigger: en.triggerKind ? `由${en.triggerKind}触发${en.triggerNote ? ':' + en.triggerNote : ''}` : (en.triggerNote || ''),
+      summary: en.kind === 'summary',
+      subjectId: (eventStore.byId(en.eventId)?.subjectIds || [])[0] || '', eventId: en.eventId,
+    });
+  }
+  return items.sort((a, b) => b.at - a.at);
+});
+
+// 按天分组:今天 / 昨天 / M月D日
+const groups = computed(() => {
+  const map = new Map();
+  for (const it of feed.value) {
+    const d = dayjs(it.at);
+    const label = d.isSame(dayjs(), 'day') ? '今天' : d.isSame(dayjs().subtract(1, 'day'), 'day') ? '昨天' : d.format('M月D日');
+    if (!map.has(label)) map.set(label, []);
+    map.get(label).push(it);
+  }
+  return [...map.entries()];
+});
+
+const subjectName = (id) => subjectStore.nameOf(id);
+const eventTitle = (id) => eventStore.byId(id)?.title || '线索';
+</script>
+
+<template>
+  <div class="page">
+    <div class="page-head">
+      <h1>记录</h1>
+      <div class="head-icons">
+        <van-icon name="search" size="20" @click="router.push('/search')" />
+        <van-icon name="setting-o" size="20" @click="router.push('/settings')" />
+      </div>
+    </div>
+
+    <!-- 快捷输入:内容即可发送;细节全部可选展开 -->
+    <div class="card quick">
+      <van-field
+        v-model="form.content"
+        type="textarea"
+        rows="2"
+        autosize
+        :placeholder="`随手记一句(${kind}…)`"
+        class="quick-input"
+      />
+      <div class="quick-foot">
+        <van-button size="small" plain round @click="detail = !detail">{{ detail ? '收起细节' : '添加细节' }}</van-button>
+        <van-button type="primary" size="small" round icon="promotion" @click="quickSend">记下</van-button>
+      </div>
+      <template v-if="detail">
+        <div class="block-label">类型</div>
+        <div class="chip-row">
+          <button v-for="k in THOUGHT_KINDS" :key="k" class="tag-chip" :class="{ active: kind === k }" @click="kind = k">{{ k }}</button>
+        </div>
+        <div class="block-label">触发源</div>
+        <div class="chip-row">
+          <button v-for="k in TRIGGER_KINDS" :key="k" class="tag-chip" :class="{ active: triggerKind === k }" @click="triggerKind = triggerKind === k ? '' : k">{{ k }}</button>
+        </div>
+        <van-field v-model="form.triggerNote" type="textarea" rows="1" autosize placeholder="触发说明(选填)" />
+        <div class="block-label">挂到线索(选填)</div>
+        <div class="chip-row">
+          <button v-for="e in eventStore.threads.slice(0, 6)" :key="e.id" class="tag-chip" :class="{ active: form.eventId === e.id }" @click="form.eventId = form.eventId === e.id ? '' : e.id">{{ e.title.slice(0, 10) }}</button>
+          <span v-if="!eventStore.threads.length" class="muted">还没有线索</span>
+        </div>
+        <div class="block-label">挂到对象(选填)</div>
+        <div class="chip-row">
+          <button v-for="s in subjectStore.active" :key="s.id" class="tag-chip" :class="{ active: form.subjectId === s.id }" @click="form.subjectId = form.subjectId === s.id ? '' : s.id">{{ s.name }}</button>
+        </div>
+      </template>
+    </div>
+
+    <!-- 记录流 -->
+    <template v-for="[label, list] in groups" :key="label">
+      <div class="section-title">{{ label }} · {{ list.length }}</div>
+      <div class="card">
+        <div v-for="it in list" :key="it.key" class="feed-item" :class="{ summary: it.summary }">
+          <div class="feed-kind" :class="{ 'k-summary': it.summary }">{{ it.kind }}</div>
+          <div class="row-main">
+            <div class="feed-text">{{ it.content }}</div>
+            <div class="muted">
+              {{ fmtTime(it.at) }}
+              <template v-if="it.trigger"> · {{ it.trigger }}</template>
+            </div>
+            <div class="feed-chips">
+              <span v-if="it.eventId" class="chip" @click="router.push(`/events/${it.eventId}`)"># {{ eventTitle(it.eventId) }}</span>
+              <span v-if="it.subjectId" class="chip" @click="router.push(`/subjects/${it.subjectId}`)">@ {{ subjectName(it.subjectId) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+    <div v-if="!feed.length" class="card">
+      <div class="empty-tip">还没有记录 —— 上面输入框里写一句,3 秒记下第一笔</div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.head-icons { display: flex; gap: 16px; color: var(--text-2); cursor: pointer; }
+.quick { padding-bottom: 10px; }
+.quick-input :deep(.van-field__control) { font-size: 15px; }
+.quick-foot { display: flex; justify-content: space-between; padding: 4px 2px 0; }
+.block-label { font-size: 12px; color: var(--text-3); margin: 10px 2px 6px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 2px; }
+.tag-chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 13px; font-size: 12px; color: var(--text-2); }
+.tag-chip.active { border-color: var(--brand); color: var(--brand); font-weight: 600; background: color-mix(in srgb, var(--brand) 8%, transparent); }
+.feed-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.feed-item:last-child { border-bottom: 0; }
+.feed-item.summary { background: color-mix(in srgb, var(--brand) 5%, transparent); border-radius: 8px; padding: 10px 8px; margin: 4px 0; border-bottom: 0; }
+.feed-kind { flex: none; font-size: 11px; color: var(--text-3); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; height: fit-content; margin-top: 2px; white-space: nowrap; }
+.feed-kind.k-summary { color: var(--brand); border-color: var(--brand); font-weight: 600; }
+.row-main { flex: 1; min-width: 0; }
+.feed-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+.feed-chips { margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; }
+.feed-chips .chip { cursor: pointer; }
+</style>

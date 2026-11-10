@@ -1,13 +1,12 @@
 import { test, expect } from '@playwright/test';
 
-// 冒烟：收件箱快速捕获事件 → 出现在待复盘分区
-test('收件箱捕获事件 → 待复盘', async ({ page }) => {
+// 冒烟：记录流首页 3 秒随手记 → 出现在时间线
+test('记录流随手记 → 时间线出现', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('.page-head h1')).toContainText('收件箱');
+  await expect(page.locator('.page-head h1')).toContainText('记录');
 
-  await page.getByRole('button', { name: '记事件' }).click();
-  await page.getByPlaceholder('发生了什么?一句话标题 *').fill('冒烟测试事件');
-  await page.getByRole('button', { name: '捕获 → 待复盘' }).click();
+  await page.locator('.quick-input textarea').fill('冒烟测试:随手记一句');
+  await page.getByRole('button', { name: /记下/ }).click();
 
-  await expect(page.locator('.row-title', { hasText: '冒烟测试事件' })).toBeVisible();
+  await expect(page.locator('.feed-text', { hasText: '冒烟测试:随手记一句' })).toBeVisible();
 });

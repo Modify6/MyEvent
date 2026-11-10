@@ -56,7 +56,7 @@ async function save() {
       <van-field v-model="form.trigger" label="触发信号" placeholder="看到什么信号时应用" />
       <van-field v-model="form.reason" type="textarea" rows="2" autosize label="背后原因" placeholder="为什么这条规则成立" />
       <van-field v-model="form.counterEx" type="textarea" rows="1" autosize label="反例" placeholder="什么情况下它不适用(选填)" />
-      <van-button type="primary" round block style="margin-top: 14px" :disabled="!check.ok" @click="save">保存到经验库</van-button>
+      <van-button type="primary" round block style="margin-top: 14px" :disabled="!form.content.trim()" @click="save">保存到经验库</van-button>
     </div>
   </van-popup>
 </template>

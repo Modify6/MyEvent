@@ -1,84 +1,61 @@
 <script setup>
-// 事件时间线:全部事件按天分组倒序;点击进入复盘(捕获→复盘一体的分步表单)
-import { computed, ref } from 'vue';
+// 线索列表:每条线索按最后活动倒序;点击进入过程时间线
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { showConfirmDialog } from 'vant';
 import dayjs from 'dayjs';
 import { useEventStore } from '../stores/event.js';
 import { useCatalogStore } from '../stores/catalog.js';
-import ReviewForm from '../components/ReviewForm.vue';
-import StatusTag from '../components/StatusTag.vue';
+import EventComposer from '../components/EventComposer.vue';
+import { fmtDate } from '../lib/time.js';
 
 const router = useRouter();
 const store = useEventStore();
 const catalog = useCatalogStore();
-const showReview = ref(false);
-const reviewEventId = ref('');
+const showNew = ref(false);
 
-const groups = computed(() => {
-  const map = new Map();
-  for (const e of [...store.active].sort((a, b) => b.startAt - a.startAt)) {
-    const key = dayjs(e.startAt).format('YYYY-MM-DD');
-    if (!map.has(key)) map.set(key, []);
-    map.get(key).push(e);
-  }
-  return [...map.entries()].map(([key, list]) => ({ key, label: dayjs(key).format('M月D日 dd'), list }));
-});
-
-function open(e) {
-  reviewEventId.value = e.id;
-  showReview.value = true;
-}
-
-async function removeEv(e) {
-  try {
-    await showConfirmDialog({ title: '删除事件?', message: `「${e.title}」及其复盘内容将移入回收状态(软删)。`, confirmButtonText: '删除' });
-    await store.remove(e.id);
-  } catch {}
-}
+const lastAt = (e) => {
+  let t = e.updatedAt || 0;
+  for (const en of store.entries) if (!en.deleted && en.eventId === e.id && en.at > t) t = en.at;
+  return t;
+};
 </script>
 
 <template>
   <div class="page">
     <div class="page-head">
-      <h1 class="head-name"><van-icon name="arrow-left" size="20" @click="router.back()" />全部事件</h1>
+      <h1>事件</h1>
+      <van-button size="small" round type="primary" icon="plus" @click="showNew = true">新线索</van-button>
     </div>
 
-    <template v-for="g in groups" :key="g.key">
-      <div class="section-title">{{ g.label }}</div>
-      <div class="card">
-        <div v-for="e in g.list" :key="e.id" class="ev-item">
-          <div class="ev-main" @click="open(e)">
-            <div class="ev-title">
-              {{ e.title }}
-              <span v-if="e.categoryId" class="chip" :style="{ '--c': catalog.catColor(e.categoryId) }">{{ catalog.catName(e.categoryId) }}</span>
-            </div>
-            <div v-if="e.fact" class="muted ev-note">{{ e.fact }}</div>
-            <div v-if="store.entryCountOf(e.id)" class="muted ev-note">跟进 {{ store.entryCountOf(e.id) }} 条</div>
+    <div v-if="store.threads.length" class="card">
+      <div v-for="e in store.threads" :key="e.id" class="ev-item" @click="router.push(`/events/${e.id}`)">
+        <div class="ev-main">
+          <div class="ev-title">
+            {{ e.title }}
+            <span v-if="e.categoryId" class="chip" :style="{ '--c': catalog.catColor(e.categoryId) }">{{ catalog.catName(e.categoryId) }}</span>
           </div>
-          <div class="ev-side">
-            <StatusTag kind="event" :status="e.status" />
-            <van-icon name="cross" color="var(--text-3)" size="16" @click="removeEv(e)" />
+          <div class="muted">
+            {{ fmtDate(e.startAt) }} 开始<template v-if="store.entryCountOf(e.id)"> · {{ store.entryCountOf(e.id) }} 条记录</template>
+            <template v-if="lastAt(e) > e.startAt"> · 最近 {{ dayjs(lastAt(e)).format('M月D日') }}</template>
           </div>
+          <div v-if="e.fact" class="muted ev-note">{{ e.fact }}</div>
         </div>
+        <van-icon name="arrow" color="var(--text-3)" />
       </div>
-    </template>
-    <div v-if="!groups.length" class="card">
-      <div class="empty-tip">还没有事件 —— 去收件箱「记事件」</div>
+    </div>
+    <div v-else class="card">
+      <div class="empty-tip">还没有线索 —— 一个持续跟进的事情(一个项目/一次决策/一段关系)就是一条线索,<br />过程记录都会挂在它下面</div>
+      <van-button type="primary" round block @click="showNew = true">创建第一条线索</van-button>
     </div>
 
-    <ReviewForm v-model:show="showReview" :event-id="reviewEventId" />
+    <EventComposer v-model:show="showNew" @saved="router.push(`/events/${$event.id}`)" />
   </div>
 </template>
 
 <style scoped>
-.head-name { display: flex; align-items: center; gap: 10px; }
-.head-name .van-icon { color: var(--text-2); cursor: pointer; }
-.ev-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.ev-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
 .ev-item:last-child { border-bottom: 0; }
-.ev-main { flex: 1; min-width: 0; cursor: pointer; }
+.ev-main { flex: 1; min-width: 0; }
 .ev-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ev-note { font-size: 12px; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ev-side { display: flex; align-items: center; gap: 12px; }
-.ev-side .van-icon { cursor: pointer; }
 </style>

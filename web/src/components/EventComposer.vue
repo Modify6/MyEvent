@@ -64,7 +64,7 @@ async function save() {
         at: fromLocalInput(form.startAt) || Date.now(),
       });
     }
-    showSuccessToast('已捕获,待复盘');
+    showSuccessToast('线索已创建');
     emit('saved', ev);
     emit('update:show', false);
   } catch (e) {
@@ -120,7 +120,7 @@ async function save() {
         <van-button v-if="!more" size="small" plain round @click="more = true">更多选项</van-button>
       </div>
 
-      <van-button type="primary" round block style="margin-top: 14px" @click="save">捕获 → 待复盘</van-button>
+      <van-button type="primary" round block style="margin-top: 14px" @click="save">创建线索</van-button>
     </div>
   </van-popup>
 </template>

@@ -31,6 +31,7 @@ const inRange = (t) => t >= range.value.start && t < range.value.end;
 
 const weekEvents = computed(() => eventStore.active.filter((e) => inRange(e.startAt)));
 const weekThoughts = computed(() => thoughtStore.active.filter((t) => inRange(t.at || t.createdAt)));
+const weekEntries = computed(() => eventStore.entries.filter((en) => !en.deleted && inRange(en.at)));
 const weekPredictions = computed(() => predictionStore.active.filter((p) => inRange(p.madeAt || p.createdAt)));
 const weekVerified = computed(() => predictionStore.active.filter((p) => p.verifiedAt && inRange(p.verifiedAt)));
 const weekReviewed = computed(() => weekEvents.value.filter((e) => e.status === 'reviewed'));
@@ -60,8 +61,8 @@ const sceneFreq = computed(() => {
 });
 
 const todos = computed(() => [
-  { label: '待复盘事件', n: eventStore.inbox.length, to: '/' },
-  { label: '想法收件箱', n: thoughtStore.inbox.length, to: '/' },
+  { label: '本周记录', n: weekThoughts.value.length + weekEntries.value.length, to: '/' },
+  { label: '活跃线索', n: eventStore.threads.filter((e) => e.updatedAt >= range.value.start || (eventStore.entriesOf(e.id)[0]?.at ?? 0) >= range.value.start).length, to: '/events' },
   { label: '待验证预判', n: predictionStore.due.length, to: '/predictions' },
 ]);
 </script>
@@ -88,10 +89,10 @@ const todos = computed(() => [
     </div>
 
     <div class="card">
-      <div class="section-title" style="margin-top: 0">待办 · 别让它们烂在收件箱</div>
+      <div class="section-title" style="margin-top: 0">本周动态</div>
       <div v-for="t in todos" :key="t.label" class="todo-line" @click="router.push(t.to)">
         <span>{{ t.label }}</span>
-        <span class="todo-right" :class="{ hot: t.n > 0 }">{{ t.n ? t.n + ' 条 ›' : '清零 ✓' }}</span>
+        <span class="todo-right" :class="{ hot: t.label === '待验证预判' && t.n > 0 }">{{ t.n }} {{ t.label === '待验证预判' ? '条 ›' : '›' }}</span>
       </div>
       <div v-if="weekVerified.length" class="muted" style="margin-top: 8px">本周完成验证 {{ weekVerified.length }} 条预判</div>
     </div>

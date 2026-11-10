@@ -4,7 +4,7 @@ import { defineStore } from 'pinia';
 import { putRow, softDelete, getAllRules, onChange } from '../db/repo.js';
 import { uuid } from '../lib/util.js';
 import { logInfo } from '../lib/logger.js';
-import { validateRuleText } from '../lib/domain.js';
+import { validateRuleText } from '../lib/domain.js'; // 仅用于 RuleComposer 的引导提示,不再强制
 
 export const useRuleStore = defineStore('rule', {
   state: () => ({ rules: [], loaded: false }),
@@ -29,10 +29,9 @@ export const useRuleStore = defineStore('rule', {
     watch() {
       return onChange(() => this.load());
     },
-    // 创建规则（强制「如果 X，则 Y」）；refEvents/refPredictions 记录来源
+    // 创建规则（内容自由;「如果X则Y」句式仅作引导,不强制 —— 总结水到渠成）；refEvents/refPredictions 记录来源
     async create({ scene, trigger, content, reason = '', counterEx = '', refEvents = [], refPredictions = [] }) {
-      const check = validateRuleText(content);
-      if (!check.ok) throw new Error(check.msg);
+      if (!String(content || '').trim()) throw new Error('请写下规则内容');
       const row = {
         id: uuid(),
         scene: String(scene || '').trim(),

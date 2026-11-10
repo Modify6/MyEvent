@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  isReviewComplete,
   validateRuleText,
   predictionEffectiveStatus,
   calibrationBuckets,
@@ -28,16 +27,11 @@ describe('validateRuleText', () => {
   });
 });
 
-describe('isReviewComplete', () => {
-  const base = { expect: '预期他会同意', actual: '他拒绝了', nextRule: '如果报价超预算,则先问清决策人是谁' };
-  it('预期+实际+合格规则 = 完成', () => {
-    expect(isReviewComplete(base)).toBe(true);
-  });
-  it('缺任何一项都不算完成', () => {
-    expect(isReviewComplete(null)).toBe(false);
-    expect(isReviewComplete({ ...base, expect: '' })).toBe(false);
-    expect(isReviewComplete({ ...base, actual: ' ' })).toBe(false);
-    expect(isReviewComplete({ ...base, nextRule: '要冷静' })).toBe(false);
+describe('validateRuleText(0.3.0 起仅引导,不再阻断)', () => {
+  it('「如果X则Y」给出通过提示,空泛态度词给出改进建议(均为提示性质)', () => {
+    expect(validateRuleText('如果收到模糊需求,则先问清验收标准').ok).toBe(true);
+    expect(validateRuleText('如果吵架,则要冷静').ok).toBe(false); // 引导提示,不阻断保存
+    expect(validateRuleText('下次小心点').ok).toBe(false);
   });
 });
 

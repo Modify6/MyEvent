@@ -30,7 +30,7 @@ export const TABLES = {
     'verifyCount', 'validity', 'lastVerifiedAt', 'createdAt', 'updatedAt', 'deleted',
   ],
   eventEntries: [
-    'id', 'eventId', 'content', 'triggerKind', 'triggerNote', 'at', 'createdAt', 'updatedAt', 'deleted',
+    'id', 'eventId', 'kind', 'content', 'triggerKind', 'triggerNote', 'at', 'createdAt', 'updatedAt', 'deleted',
   ],
 };
 

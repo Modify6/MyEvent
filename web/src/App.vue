@@ -1,7 +1,7 @@
 <script setup>
-// 应用外壳:预载全部领域 store + 5 主入口 tabbar(收件箱/对象/预判/经验库/回顾)
-// 收件箱 tab 徽标 = 待复盘事件 + 想法收件箱 + 待验证预判
-import { computed, onMounted, onUnmounted } from 'vue';
+// 应用外壳:预载全部领域 store + 5 主入口 tabbar(记录/事件/对象/经验/回顾)
+// 0.3.0 过程记录驱动:无待办徽标、无催促 —— 预判入口收进对象页与回顾页
+import { onMounted, onUnmounted } from 'vue';
 import { useEventStore } from './stores/event.js';
 import { useThoughtStore } from './stores/thought.js';
 import { usePredictionStore } from './stores/prediction.js';
@@ -45,20 +45,15 @@ onMounted(async () => {
   window.Capacitor?.Plugins?.App?.addListener?.('resume', () => sync.trigger());
 });
 onUnmounted(() => unsubs.forEach((u) => u?.()));
-
-const inboxBadge = computed(() => {
-  const n = eventStore.inbox.length + thoughtStore.inbox.length + predictionStore.due.length;
-  return n > 99 ? '99+' : n > 0 ? String(n) : '';
-});
 </script>
 
 <template>
   <router-view />
   <van-tabbar route safe-area-inset-bottom>
-    <van-tabbar-item to="/" icon="todo-list-o" :badge="inboxBadge">收件箱</van-tabbar-item>
+    <van-tabbar-item to="/" icon="edit">记录</van-tabbar-item>
+    <van-tabbar-item to="/events" icon="orders-o">事件</van-tabbar-item>
     <van-tabbar-item to="/subjects" icon="apps-o">对象</van-tabbar-item>
-    <van-tabbar-item to="/predictions" icon="aim">预判</van-tabbar-item>
-    <van-tabbar-item to="/rules" icon="bookmark-o">经验库</van-tabbar-item>
+    <van-tabbar-item to="/rules" icon="bookmark-o">经验</van-tabbar-item>
     <van-tabbar-item to="/review" icon="chart-trending-o">回顾</van-tabbar-item>
   </van-tabbar>
 </template>

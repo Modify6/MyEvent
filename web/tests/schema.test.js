@@ -27,6 +27,17 @@ describe('schema v3', () => {
     expect(ob).toHaveLength(1);
   });
 
+  it('小结(kind=summary)是过程记录的一种,与普通记录同表共存', async () => {
+    await putRow('eventEntries', {
+      id: 'en-sum-1', eventId: 'e-test-1', kind: 'summary',
+      content: '摘要会过滤反证信息,读原文', at: 456, createdAt: 1, deleted: 0,
+    });
+    const en = await db.eventEntries.get('en-sum-1');
+    expect(en.kind).toBe('summary');
+    // 老数据无 kind 字段 → 视为普通记录(undefined 不影响展示兜底)
+    expect((await db.eventEntries.get('en-test-1')).kind).toBeUndefined();
+  });
+
   it('putRow 写入并进 outbox 队列(同步协议写路径)', async () => {
     const row = await putRow('rules', { id: 'r-test-1', content: '如果收到模糊需求,则先问清验收标准', validity: 'pending', createdAt: 1, deleted: 0 });
     expect(row.updatedAt).toBeGreaterThan(0);

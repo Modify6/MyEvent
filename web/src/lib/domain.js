@@ -4,7 +4,8 @@
 export const EVENT_STATUS_LABELS = { inbox: '待复盘', pending: '复盘中', reviewed: '已复盘' };
 
 export const SUBJECT_TYPES = ['人', '项目', '公司', '投资标的', '关系', '主题', '决策'];
-export const THOUGHT_KINDS = ['观察', '假设', '判断', '疑问', '情绪', '灵感', '决策'];
+// 记录类型(0.3.0 过程记录驱动;旧数据里的旧类型原样展示,无迁移)
+export const THOUGHT_KINDS = ['想法', '事实', '感想', '灵感', '疑问', '判断', '决策', '观察'];
 export const PREDICTION_KINDS = ['结果型', '数值型', '时间型', '行为型', '自我型'];
 // 事件过程记录的触发源类型:这条记录由什么引发(可持续扩充)
 export const TRIGGER_KINDS = ['事情', '视频', '文章', '人', '对话', '场景', '灵感', '其他'];
@@ -29,17 +30,9 @@ export const MAX_ACTIVE_PREDICTIONS = 15;
 export const BIAS_REASONS = ['信息不足', '过度自信', '忽略反证', '情绪干扰', '时间估计错误', '外部意外'];
 export const CHAIN_STEPS = ['事实', '假设', '规则', '推理跳跃'];
 
-// —— 事件复盘 ——
+// —— 事件复盘(0.3.0 起小结为自由文本,不再有完成标准;规则校验仅作引导提示) ——
 
-// 复盘完成标准（设计方案 5.1）：必须有「预期 vs 实际」对比 + 合格的「下次规则」
-export function isReviewComplete(review) {
-  if (!review) return false;
-  const hasExpect = !!String(review.expect || '').trim();
-  const hasActual = !!String(review.actual || '').trim();
-  return hasExpect && hasActual && validateRuleText(review.nextRule).ok;
-}
-
-// 「下次规则」校验：必须可执行可检验——「如果 X,则 Y」句式，且 Y 不是空泛态度词
+// 「下次规则」引导:推荐「如果 X,则 Y」句式,且 Y 不是空泛态度词(提示不阻断)
 const VAGUE_WORDS = ['冷静', '细心', '认真', '努力', '加油', '用心', '注意', '小心', '坚持', '谨慎', '耐心', '专注'];
 
 export function validateRuleText(text) {

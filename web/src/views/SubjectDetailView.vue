@@ -9,9 +9,8 @@ import { useThoughtStore } from '../stores/thought.js';
 import { usePredictionStore } from '../stores/prediction.js';
 import { useRuleStore } from '../stores/rule.js';
 import EventComposer from '../components/EventComposer.vue';
-import ThoughtComposer from '../components/ThoughtComposer.vue';
+import NoteComposer from '../components/NoteComposer.vue';
 import PredictionComposer from '../components/PredictionComposer.vue';
-import ReviewForm from '../components/ReviewForm.vue';
 import SubjectForm from '../components/SubjectForm.vue';
 import StatusTag from '../components/StatusTag.vue';
 import ConfidenceBar from '../components/ConfidenceBar.vue';
@@ -65,21 +64,12 @@ const showEvent = ref(false);
 const showThought = ref(false);
 const showPred = ref(false);
 const showForm = ref(false);
-const editThought = ref(null);
-const reviewEventId = ref('');
-const showReview = ref(false);
 
-function openTimelineThought(t) {
-  editThought.value = t;
-  showThought.value = true;
-}
-function openNewThought() {
-  editThought.value = null;
-  showThought.value = true;
-}
-function openTimelineEvent(e) {
-  reviewEventId.value = e.id;
-  showReview.value = true;
+// 时间线行跳转:预判→详情;事件→线索页;想法→其挂靠的线索(若有)
+function goTimeline(it) {
+  if (it.kind === 'prediction') return router.push(`/predictions/${it.data.id}`);
+  if (it.kind === 'event') return router.push(`/events/${it.data.id}`);
+  if (it.kind === 'thought' && it.data.relatedEventId) return router.push(`/events/${it.data.relatedEventId}`);
 }
 </script>
 
@@ -126,7 +116,7 @@ function openTimelineEvent(e) {
     <!-- 快捷操作 -->
     <div class="card quick-row">
       <van-button size="small" plain round type="primary" icon="edit" @click="showEvent = true">记事件</van-button>
-      <van-button size="small" plain round type="primary" icon="chat-o" @click="openNewThought">记想法</van-button>
+      <van-button size="small" plain round type="primary" icon="chat-o" @click="showThought = true">记一笔</van-button>
       <van-button size="small" plain round type="primary" icon="aim" @click="showPred = true">做预判</van-button>
     </div>
 
@@ -134,7 +124,7 @@ function openTimelineEvent(e) {
     <div class="section-title">时间线 · 事实 / 想法 / 预判</div>
     <div class="card">
       <template v-if="timeline.length">
-        <div v-for="it in timeline.slice(0, 30)" :key="it.kind + it.data.id" class="tl-line" @click="it.kind === 'event' ? openTimelineEvent(it.data) : it.kind === 'prediction' ? router.push(`/predictions/${it.data.id}`) : openTimelineThought(it.data)">
+        <div v-for="it in timeline.slice(0, 30)" :key="it.kind + it.data.id" class="tl-line" @click="goTimeline(it)">
           <span class="tl-kind" :class="it.kind">{{ it.kind === 'event' ? '事' : it.kind === 'thought' ? '想' : '判' }}</span>
           <div class="row-main">
             <div class="tl-text">{{ it.kind === 'event' ? it.data.title : it.data.content }}</div>
@@ -190,9 +180,8 @@ function openTimelineEvent(e) {
     </template>
 
     <EventComposer v-model:show="showEvent" :subject-id="sid" />
-    <ThoughtComposer v-model:show="showThought" :thought="editThought" :subject-id="sid" />
+    <NoteComposer v-model:show="showThought" :subject-id="sid" />
     <PredictionComposer v-model:show="showPred" :subject-id="sid" @saved="router.push(`/predictions/${$event.id}`)" @locked="router.push(`/predictions/${$event.id}`)" />
-    <ReviewForm v-model:show="showReview" :event-id="reviewEventId" />
     <SubjectForm v-model:show="showForm" :subject="subject" />
   </div>
   <div v-else class="page"><div class="card"><div class="empty-tip">对象不存在或已删除</div></div></div>

@@ -1,4 +1,5 @@
-// 领域 store：想法（Thought）——先 10 秒捕获进收件箱，每周整理：归入对象 / 合并 / 丢弃 / 升级预判
+// 领域 store:想法/随手记录(Thought)——过程记录驱动的核心实体
+// 0.3.0:记录即完成,直接归档(收件箱概念移除);可挂对象/事件;可带触发源
 import { defineStore } from 'pinia';
 import { putRow, softDelete, getAllThoughts, onChange } from '../db/repo.js';
 import { uuid } from '../lib/util.js';
@@ -9,11 +10,9 @@ export const useThoughtStore = defineStore('thought', {
   state: () => ({ thoughts: [], loaded: false }),
   getters: {
     active: (s) => s.thoughts.filter((t) => !t.deleted),
-    // 想法收件箱：尚未归档整理的
-    inbox: (s) => s.thoughts.filter((t) => !t.deleted && t.state === 'inbox').sort((a, b) => b.at - a.at),
-    archived: (s) => s.thoughts.filter((t) => !t.deleted && t.state === 'archived').sort((a, b) => b.at - a.at),
     byId: (s) => (id) => s.thoughts.find((t) => t.id === id),
     ofSubject: (s) => (sid) => s.thoughts.filter((t) => !t.deleted && t.subjectId === sid).sort((a, b) => b.at - a.at),
+    ofEvent: (s) => (eid) => s.thoughts.filter((t) => !t.deleted && t.relatedEventId === eid).sort((a, b) => b.at - a.at),
   },
   actions: {
     async load() {
@@ -23,53 +22,29 @@ export const useThoughtStore = defineStore('thought', {
     watch() {
       return onChange(() => this.load());
     },
-    // 十秒快记：内容必填，其余可后补；从对象页记录时直接归档（state='archived'）不进收件箱
-    async quickAdd({ content, kind = '观察', subjectId = '', confidence = null, source = '', basis = '', counter = '', at, state = 'inbox' }) {
+    // 随手记:内容必填,其余全可选 —— 3 秒记完即入库归档
+    async quickAdd({ content, kind = '想法', subjectId = '', relatedEventId = '', confidence = null, source = '', basis = '', counter = '', at }) {
       const text = String(content || '').trim();
       if (!text) throw new Error('想记点什么？先写一句');
       const row = {
         id: uuid(),
         subjectId: subjectId || '',
+        relatedEventId: relatedEventId || '',
         content: text,
-        kind: THOUGHT_KINDS.includes(kind) ? kind : '观察',
+        kind: THOUGHT_KINDS.includes(kind) ? kind : '想法',
         at: at || Date.now(),
         source: source || '',
         confidence: clampPct(confidence),
         basis: basis || '',
         counter: counter || '',
-        relatedEventId: null,
         parentThoughtId: null,
         relation: '',
-        state: state === 'archived' ? 'archived' : 'inbox',
+        state: 'archived',
         createdAt: Date.now(),
       };
       await putRow('thoughts', row);
-      logInfo('thought', `记录想法(${row.kind})`);
+      logInfo('thought', `随手记一条(${row.kind})`);
       return row;
-    },
-    // 编辑（整理收件箱时补对象/类型/置信度等）
-    async patch(id, data) {
-      const t = this.byId(id);
-      if (!t) return null;
-      const next = { ...t, ...data, id: t.id };
-      if (next.confidence != null) next.confidence = clampPct(next.confidence);
-      await putRow('thoughts', next);
-      return next;
-    },
-    // 归档整理：指定对象（可为空）后离开收件箱
-    async archive(id, subjectId) {
-      const t = this.byId(id);
-      if (!t) return;
-      await putRow('thoughts', { ...t, subjectId: subjectId ?? t.subjectId, state: 'archived' });
-      logInfo('thought', '想法已归档');
-    },
-    // 升级为预判：返回预填数据（由 PredictionComposer 接管）
-    toPredictionDraft(t) {
-      return {
-        subjectId: t?.subjectId || '',
-        content: t?.content || '',
-        origConfidence: t?.confidence ?? null,
-      };
     },
     async remove(id) {
       await softDelete('thoughts', id);
