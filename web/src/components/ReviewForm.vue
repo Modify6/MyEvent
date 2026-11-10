@@ -8,8 +8,9 @@ import { useEventStore } from '../stores/event.js';
 import { useSubjectStore } from '../stores/subject.js';
 import { useCatalogStore } from '../stores/catalog.js';
 import { useRuleStore } from '../stores/rule.js';
+import EntryComposer from './EntryComposer.vue';
 import { validateRuleText, isReviewComplete } from '../lib/domain.js';
-import { toLocalInput, fromLocalInput } from '../lib/time.js';
+import { toLocalInput, fromLocalInput, fmtDate, fmtTime } from '../lib/time.js';
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -89,6 +90,8 @@ const isDone = computed(() => {
   const ev = eventStore.byId(props.eventId);
   return ev?.status === 'reviewed';
 });
+const entries = computed(() => eventStore.entriesOf(props.eventId));
+const showEntry = ref(false);
 
 function toggleSubject(id) {
   const i = form.subjectIds.indexOf(id);
@@ -218,6 +221,26 @@ async function close() {
             @click="form.categoryId = form.categoryId === c.id ? '' : c.id"
           >{{ c.name }}</button>
         </div>
+
+        <!-- 过程记录:事件可持续跟进,每条带触发源 -->
+        <div class="block-label row-between">
+          <span>过程记录 · {{ entries.length }} 条<span class="muted">(每次跟进由什么触发)</span></span>
+          <van-button size="small" plain round type="primary" icon="plus" @click="showEntry = true">追加</van-button>
+        </div>
+        <template v-if="entries.length">
+          <div v-for="en in entries" :key="en.id" class="entry-line">
+            <div class="row-main">
+              <div class="entry-text">{{ en.content }}</div>
+              <div class="muted">
+                {{ fmtDate(en.at) }} {{ fmtTime(en.at) }}
+                <template v-if="en.triggerKind"> · 由{{ en.triggerKind }}触发</template>
+                <template v-if="en.triggerNote && en.triggerNote !== en.content"> · {{ en.triggerNote }}</template>
+              </div>
+            </div>
+            <van-icon name="cross" size="15" color="var(--text-3)" @click="eventStore.removeEntry(en.id)" />
+          </div>
+        </template>
+        <div v-else class="muted" style="padding: 2px 2px 6px">还没有过程记录 —— 捕获时未填触发源,可点「追加」补记</div>
       </div>
 
       <!-- 步骤 1:目标与预期 -->
@@ -271,6 +294,8 @@ async function close() {
         <van-button v-else type="primary" round style="margin-left: 10px" :disabled="isDone" @click="finish">{{ isDone ? '已复盘' : '完成复盘' }}</van-button>
       </div>
     </div>
+    <!-- 追加过程记录(带触发源) -->
+    <EntryComposer v-model:show="showEntry" :event-id="eventId" />
   </van-popup>
 </template>
 
@@ -291,4 +316,9 @@ async function close() {
 .rule-tip.ok { color: #34c273; }
 .rule-tip.bad { color: var(--danger); }
 .nav-row { display: flex; align-items: center; margin-top: 18px; padding-bottom: 6px; }
+.row-between { display: flex; align-items: center; justify-content: space-between; }
+.entry-line { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.entry-line:last-child { border-bottom: 0; }
+.entry-text { font-size: 13px; line-height: 1.5; }
+.entry-line .van-icon { cursor: pointer; margin-top: 3px; flex: none; }
 </style>

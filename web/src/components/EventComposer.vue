@@ -5,6 +5,7 @@ import { showFailToast, showSuccessToast } from 'vant';
 import { useEventStore } from '../stores/event.js';
 import { useSubjectStore } from '../stores/subject.js';
 import { useCatalogStore } from '../stores/catalog.js';
+import { TRIGGER_KINDS } from '../lib/domain.js';
 import { toLocalInput, fromLocalInput } from '../lib/time.js';
 
 const props = defineProps({
@@ -17,8 +18,9 @@ const eventStore = useEventStore();
 const subjectStore = useSubjectStore();
 const catalog = useCatalogStore();
 
-const form = reactive({ title: '', startAt: '', fact: '', categoryId: '', subjectIds: [] });
+const form = reactive({ title: '', startAt: '', fact: '', categoryId: '', subjectIds: [], triggerNote: '' });
 const more = ref(false);
+const triggerKind = ref('');
 
 watch(
   () => props.show,
@@ -30,7 +32,9 @@ watch(
       fact: '',
       categoryId: '',
       subjectIds: props.subjectId ? [props.subjectId] : [],
+      triggerNote: '',
     });
+    triggerKind.value = '';
     more.value = false;
   }
 );
@@ -50,6 +54,16 @@ async function save() {
       categoryId: form.categoryId,
       fact: form.fact,
     });
+    // 捕获时填了触发源 → 成为第 1 条过程记录(这件事的"出发原因")
+    if (triggerKind.value || form.triggerNote.trim()) {
+      await eventStore.addEntry({
+        eventId: ev.id,
+        content: form.triggerNote.trim() || `由${triggerKind.value}触发`,
+        triggerKind: triggerKind.value,
+        triggerNote: form.triggerNote.trim(),
+        at: fromLocalInput(form.startAt) || Date.now(),
+      });
+    }
     showSuccessToast('已捕获,待复盘');
     emit('saved', ev);
     emit('update:show', false);
@@ -69,6 +83,12 @@ async function save() {
 
       <van-field v-model="form.title" placeholder="发生了什么?一句话标题 *" />
       <van-field v-model="form.fact" type="textarea" rows="2" autosize placeholder="一句话事实:只写客观发生了什么(选填)" />
+
+      <div class="block-label">触发源 —— 这件事由什么引发?(选填,记下出发原因)</div>
+      <div class="chip-row">
+        <button v-for="k in TRIGGER_KINDS" :key="k" class="tag-chip" :class="{ active: triggerKind === k }" @click="triggerKind = triggerKind === k ? '' : k">{{ k }}</button>
+      </div>
+      <van-field v-model="form.triggerNote" type="textarea" rows="1" autosize placeholder="触发说明(选填),如:看了XX视频 / 和XX聊天时提到" />
 
       <div class="block-label">关联对象(可多选)</div>
       <div class="chip-row">

@@ -8,12 +8,23 @@ beforeAll(async () => {
   await db.open();
 });
 
-describe('schema v2', () => {
+describe('schema v3', () => {
   it('包含全部领域表与平台表', () => {
     const names = db.tables.map((t) => t.name);
-    for (const t of ['events', 'categories', 'subjects', 'thoughts', 'predictions', 'rules', 'outbox', 'meta', 'logs']) {
+    for (const t of ['events', 'categories', 'subjects', 'thoughts', 'predictions', 'rules', 'eventEntries', 'outbox', 'meta', 'logs']) {
       expect(names).toContain(t);
     }
+  });
+
+  it('过程记录写入并进 outbox(独立行,多端追加不互相覆盖)', async () => {
+    await putRow('eventEntries', {
+      id: 'en-test-1', eventId: 'e-test-1', content: '看了财报分析视频',
+      triggerKind: '视频', triggerNote: 'B站XX的拆解', at: 123, createdAt: 1, deleted: 0,
+    });
+    const en = await db.eventEntries.get('en-test-1');
+    expect(en.triggerKind).toBe('视频');
+    const ob = await db.outbox.where('key').equals('eventEntries:en-test-1').toArray();
+    expect(ob).toHaveLength(1);
   });
 
   it('putRow 写入并进 outbox 队列(同步协议写路径)', async () => {

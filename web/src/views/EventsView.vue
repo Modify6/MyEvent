@@ -54,6 +54,7 @@ async function removeEv(e) {
               <span v-if="e.categoryId" class="chip" :style="{ '--c': catalog.catColor(e.categoryId) }">{{ catalog.catName(e.categoryId) }}</span>
             </div>
             <div v-if="e.fact" class="muted ev-note">{{ e.fact }}</div>
+            <div v-if="store.entryCountOf(e.id)" class="muted ev-note">跟进 {{ store.entryCountOf(e.id) }} 条</div>
           </div>
           <div class="ev-side">
             <StatusTag kind="event" :status="e.status" />

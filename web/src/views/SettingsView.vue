@@ -12,7 +12,7 @@ import { api } from '../api/client.js';
 import SyncDot from '../components/SyncDot.vue';
 import VersionHistory from '../components/VersionHistory.vue';
 
-const DATA_TABLES = ['categories', 'events', 'subjects', 'thoughts', 'predictions', 'rules'];
+const DATA_TABLES = ['categories', 'events', 'subjects', 'thoughts', 'predictions', 'rules', 'eventEntries'];
 
 const auth = useAuthStore();
 const sync = useSyncStore();

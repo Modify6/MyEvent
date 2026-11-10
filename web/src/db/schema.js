@@ -37,6 +37,21 @@ db.version(2)
     })
   );
 
+// v3：事件过程记录(eventEntries)——事件可持续跟进,每条记录带触发源(类型+说明)
+// 独立表而非 events 内嵌 JSON:多端并发追加时 LWW 按"行"合并,内嵌数组会整列覆盖丢数据
+db.version(3).stores({
+  events: 'id, categoryId, *subjectIds, status, startAt, endAt, reviewedAt, createdAt, updatedAt, deleted',
+  categories: 'id, name, updatedAt, deleted',
+  subjects: 'id, name, type, nextReviewAt, createdAt, updatedAt, deleted',
+  thoughts: 'id, subjectId, kind, state, at, createdAt, updatedAt, deleted',
+  predictions: 'id, subjectId, kind, status, windowEnd, verifiedAt, createdAt, updatedAt, deleted',
+  rules: 'id, validity, scene, createdAt, updatedAt, deleted',
+  eventEntries: 'id, eventId, at, createdAt, updatedAt, deleted',
+  outbox: '++seq, key',
+  meta: 'key',
+  logs: '++id, at',
+});
+
 // 供 E2E 数据库级断言（Playwright）
 if (typeof window !== 'undefined') window.__myeventDebug = { db };
 

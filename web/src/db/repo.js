@@ -128,6 +128,7 @@ export const getSubjects = () => db.subjects.toArray();
 export const getAllThoughts = () => db.thoughts.toArray();
 export const getAllPredictions = () => db.predictions.toArray();
 export const getAllRules = () => db.rules.toArray();
+export const getAllEventEntries = () => db.eventEntries.toArray();
 
 export const getAllEvents = () => db.events.filter((e) => !e.deleted).toArray();
 

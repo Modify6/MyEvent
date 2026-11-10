@@ -6,6 +6,8 @@ export const EVENT_STATUS_LABELS = { inbox: '待复盘', pending: '复盘中', r
 export const SUBJECT_TYPES = ['人', '项目', '公司', '投资标的', '关系', '主题', '决策'];
 export const THOUGHT_KINDS = ['观察', '假设', '判断', '疑问', '情绪', '灵感', '决策'];
 export const PREDICTION_KINDS = ['结果型', '数值型', '时间型', '行为型', '自我型'];
+// 事件过程记录的触发源类型:这条记录由什么引发(可持续扩充)
+export const TRIGGER_KINDS = ['事情', '视频', '文章', '人', '对话', '场景', '灵感', '其他'];
 
 export const PREDICTION_STATUS_LABELS = {
   draft: '草稿',

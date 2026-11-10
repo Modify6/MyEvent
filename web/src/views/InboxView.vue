@@ -71,7 +71,9 @@ function openPrediction(draft) {
         <div v-for="e in eventStore.inbox.slice(0, 8)" :key="e.id" class="row-line" @click="openReview(e.id)">
           <div class="row-main">
             <div class="row-title">{{ e.title }}</div>
-            <div class="muted">{{ fmtDate(e.startAt) }} · {{ e.subjectIds?.length ? e.subjectIds.map(subjectStore.nameOf).join('/') + ' · ' : '' }}{{ e.status === 'pending' ? '复盘进行中' : '待复盘' }}</div>
+            <div class="muted">
+              {{ fmtDate(e.startAt) }} · {{ e.subjectIds?.length ? e.subjectIds.map(subjectStore.nameOf).join('/') + ' · ' : '' }}{{ e.status === 'pending' ? '复盘进行中' : '待复盘' }}<template v-if="eventStore.entryCountOf(e.id)"> · 跟进 {{ eventStore.entryCountOf(e.id) }} 条</template>
+            </div>
           </div>
           <StatusTag kind="event" :status="e.status" />
         </div>

@@ -29,6 +29,9 @@ export const TABLES = {
     'id', 'scene', 'trigger', 'content', 'reason', 'counterEx', 'refEvents', 'refPredictions',
     'verifyCount', 'validity', 'lastVerifiedAt', 'createdAt', 'updatedAt', 'deleted',
   ],
+  eventEntries: [
+    'id', 'eventId', 'content', 'triggerKind', 'triggerNote', 'at', 'createdAt', 'updatedAt', 'deleted',
+  ],
 };
 
 const INT_COLS = new Set([
