@@ -9,6 +9,7 @@ import { useThoughtStore } from '../stores/thought.js';
 import { useEventStore } from '../stores/event.js';
 import { useSubjectStore } from '../stores/subject.js';
 import NoteEditor from '../components/NoteEditor.vue';
+import QuickCreate from '../components/QuickCreate.vue';
 import { THOUGHT_KINDS, TRIGGER_KINDS } from '../lib/domain.js';
 import { fmtTime } from '../lib/time.js';
 
@@ -113,6 +114,17 @@ async function removeItem(it) {
   if (it.type === 't') await thoughtStore.remove(it.raw.id);
   else await eventStore.removeEntry(it.raw.id);
 }
+// 挂靠就地快速新建:建好即自动选中
+const showQuickCreate = ref(false);
+const quickCreateType = ref('subject');
+function quickCreate(type) {
+  quickCreateType.value = type;
+  showQuickCreate.value = true;
+}
+function onQuickCreated(row) {
+  if (quickCreateType.value === 'event') form.eventId = row.id;
+  else form.subjectId = row.id;
+}
 </script>
 
 <template>
@@ -152,11 +164,12 @@ async function removeItem(it) {
         <div class="block-label">挂到线索(选填)</div>
         <div class="chip-row">
           <button v-for="e in eventStore.threads.slice(0, 6)" :key="e.id" class="tag-chip" :class="{ active: form.eventId === e.id }" @click="form.eventId = form.eventId === e.id ? '' : e.id">{{ e.title.slice(0, 10) }}</button>
-          <span v-if="!eventStore.threads.length" class="muted">还没有线索</span>
+          <button class="tag-chip add-chip" @click="quickCreate('event')">+ 新建</button>
         </div>
         <div class="block-label">挂到对象(选填)</div>
         <div class="chip-row">
           <button v-for="s in subjectStore.active" :key="s.id" class="tag-chip" :class="{ active: form.subjectId === s.id }" @click="form.subjectId = form.subjectId === s.id ? '' : s.id">{{ s.name }}</button>
+          <button class="tag-chip add-chip" @click="quickCreate('subject')">+ 新建</button>
         </div>
       </template>
     </div>
@@ -198,6 +211,8 @@ async function removeItem(it) {
 
     <NoteEditor v-model:show="showEditor" :thought="editItem?.type === 't' ? editItem.raw : null" :entry="editItem?.type === 'e' ? editItem.raw : null" @saved="editItem = null" />
 
+    <QuickCreate v-model:show="showQuickCreate" :type="quickCreateType" @created="onQuickCreated" />
+
     <van-action-sheet
       v-model:show="showActions"
       :actions="[
@@ -220,6 +235,7 @@ async function removeItem(it) {
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 2px; }
 .tag-chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 13px; font-size: 12px; color: var(--text-2); }
 .tag-chip.active { border-color: var(--brand); color: var(--brand); font-weight: 600; background: color-mix(in srgb, var(--brand) 8%, transparent); }
+.add-chip { border-style: dashed; color: var(--text-3); }
 .feed-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .feed-item:last-child { border-bottom: 0; }
 .feed-item.summary { background: color-mix(in srgb, var(--brand) 5%, transparent); border-radius: 8px; padding: 10px 8px; margin: 4px 0; border-bottom: 0; }

@@ -6,6 +6,7 @@ import { showFailToast, showSuccessToast } from 'vant';
 import { useEventStore } from '../stores/event.js';
 import { useThoughtStore } from '../stores/thought.js';
 import { useSubjectStore } from '../stores/subject.js';
+import QuickCreate from './QuickCreate.vue';
 import { TRIGGER_KINDS, THOUGHT_KINDS } from '../lib/domain.js';
 import { toLocalInput, fromLocalInput } from '../lib/time.js';
 
@@ -72,6 +73,18 @@ watch(
 
 const edits = () => (props.thought || props.entry)?.edits || [];
 
+// 挂靠就地快速新建:建好即自动选中
+const showQuickCreate = ref(false);
+const quickCreateType = ref('subject');
+function quickCreate(type) {
+  quickCreateType.value = type;
+  showQuickCreate.value = true;
+}
+function onQuickCreated(row) {
+  if (quickCreateType.value === 'event') form.eventId = row.id;
+  else form.subjectId = row.id;
+}
+
 async function save() {
   try {
     const at = fromLocalInput(form.at) || undefined;
@@ -130,12 +143,12 @@ async function save() {
         <div class="block-label">挂到线索</div>
         <div class="chip-row">
           <button v-for="e in eventStore.threads.slice(0, 8)" :key="e.id" class="tag-chip" :class="{ active: form.eventId === e.id }" @click="form.eventId = form.eventId === e.id ? '' : e.id">{{ e.title.slice(0, 12) }}</button>
-          <span v-if="!eventStore.threads.length" class="muted">还没有线索</span>
+          <button class="tag-chip add-chip" @click="quickCreate('event')">+ 新建</button>
         </div>
         <div class="block-label">挂到对象</div>
         <div class="chip-row">
           <button v-for="s in subjectStore.active" :key="s.id" class="tag-chip" :class="{ active: form.subjectId === s.id }" @click="form.subjectId = form.subjectId === s.id ? '' : s.id">{{ s.name }}</button>
-          <span v-if="!subjectStore.active.length" class="muted">还没有对象</span>
+          <button class="tag-chip add-chip" @click="quickCreate('subject')">+ 新建</button>
         </div>
       </template>
 
@@ -154,6 +167,7 @@ async function save() {
       </div>
 
       <van-button type="primary" round block style="margin-top: 14px" @click="save">保存修改</van-button>
+      <QuickCreate v-model:show="showQuickCreate" :type="quickCreateType" @created="onQuickCreated" />
     </div>
   </van-popup>
 </template>
@@ -166,6 +180,7 @@ async function save() {
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 2px; }
 .tag-chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 13px; font-size: 12px; color: var(--text-2); }
 .tag-chip.active { border-color: var(--brand); color: var(--brand); font-weight: 600; background: color-mix(in srgb, var(--brand) 8%, transparent); }
+.add-chip { border-style: dashed; color: var(--text-3); }
 .history-box { background: var(--card-2); border-radius: 8px; padding: 10px; }
 .history-item { padding: 6px 0; border-bottom: 1px dashed var(--line); }
 .history-item:last-child { border-bottom: 0; }
