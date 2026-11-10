@@ -3,7 +3,8 @@
 // 小结 = kind='summary' 的过程记录,自由文本、可多次、随时 —— 总结水到渠成,不设完成标准
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { showConfirmDialog } from 'vant';
+import dayjs from 'dayjs';
+import { showConfirmDialog, showSuccessToast } from 'vant';
 import { useEventStore } from '../stores/event.js';
 import { useThoughtStore } from '../stores/thought.js';
 import { useSubjectStore } from '../stores/subject.js';
@@ -98,6 +99,40 @@ const PAGE_SIZE = 50;
 const limit = ref(PAGE_SIZE);
 const tlShown = computed(() => timelineFiltered.value.slice(0, limit.value));
 const hasMore = computed(() => timelineFiltered.value.length > limit.value);
+
+// 软收尾:完结/搁置/重新打开(纯手动标记,过程全保留)
+const STATE_META = {
+  open: { label: '进行中', type: 'primary' },
+  done: { label: '已完结', type: 'success' },
+  shelved: { label: '已搁置', type: 'warning' },
+};
+const stateOf = (e) => e?.threadState || 'open';
+async function setThreadState(state) {
+  await eventStore.setThreadState(eid.value, state);
+  showSuccessToast(state === 'done' ? '已标记完结' : state === 'shelved' ? '已搁置' : '已重新打开');
+}
+// 线索导出 Markdown:完整时间线(含触发源/小结)存成可读文档
+function exportMd() {
+  const lines = [
+    `# ${ev.value.title}`,
+    '',
+    `- 开始: ${fmtDate(ev.value.startAt)} · 状态: ${STATE_META[stateOf(ev.value)].label} · ${timeline.value.length} 条记录`,
+  ];
+  if (ev.value.subjectIds?.length) lines.push(`- 挂靠: ${ev.value.subjectIds.map((id) => '@ ' + subjectStore.nameOf(id)).join('、')}`);
+  if (ev.value.fact) lines.push(`> ${ev.value.fact}`);
+  lines.push('', '## 时间线', '');
+  for (const it of [...timeline.value].reverse()) {
+    const d = dayjs(it.at).format('YYYY-MM-DD HH:mm');
+    lines.push(`- [${d}] ${it.kind}${it.trigger ? `(${it.trigger})` : ''}: ${it.content}`);
+  }
+  const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${ev.value.title}.md`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showSuccessToast('已导出 Markdown');
+}
 const loadMore = () => { limit.value += PAGE_SIZE; };
 
 const showNote = ref(false);
@@ -126,6 +161,7 @@ async function removeThread() {
 
     <div class="card">
       <div class="meta-row">
+        <van-tag :type="STATE_META[stateOf(ev)].type" plain round size="medium">{{ STATE_META[stateOf(ev)].label }}</van-tag>
         <span class="muted">开始于 {{ fmtDate(ev.startAt) }}</span>
         <span class="muted">· {{ timeline.length }} 条记录</span>
       </div>
@@ -137,6 +173,15 @@ async function removeThread() {
       <div class="btn-row">
         <van-button type="primary" size="small" round icon="edit" @click="showNote = true">记一笔</van-button>
         <van-button plain type="primary" size="small" round icon="notes-o" @click="showSummary = true">写小结</van-button>
+        <van-button plain size="small" round icon="description" @click="exportMd">导出</van-button>
+      </div>
+      <div class="btn-row" style="margin-top: 8px">
+        <template v-if="stateOf(ev) === 'open'">
+          <van-button plain size="small" round type="success" @click="setThreadState('done')">完结</van-button>
+          <van-button plain size="small" round type="warning" @click="setThreadState('shelved')">搁置</van-button>
+        </template>
+        <van-button v-else plain size="small" round type="primary" @click="setThreadState('open')">重新打开</van-button>
+        <span class="muted" style="font-size: 11px; align-self: center">完结/搁置只是标记,随时可改,过程全保留</span>
       </div>
       <div class="hint-line">记一笔 = 过程中的一个点(新进展/新信息/新想法) · 写小结 = 阶段性回顾,想到哪写到哪,随时可再补</div>
     </div>

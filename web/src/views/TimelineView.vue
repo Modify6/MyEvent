@@ -1,7 +1,7 @@
 <script setup>
 // 记录流首页:3 秒随手记(内容即可),全部记录按时间倒序混排(想法/事实/感想 + 线索过程记录)
 // 没有待办、没有必填 —— 重点是过程,持续记录,演化自然沉淀
-import { computed, nextTick, reactive, ref } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { showFailToast, showSuccessToast } from 'vant';
 import dayjs from 'dayjs';
@@ -50,6 +50,20 @@ async function quickSend() {
   }
 }
 
+// —— 筛选条:类型 / 对象 / 线索(与搜索互补,流内快速聚焦) ——
+const fType = ref('');
+const fSubject = ref('');
+const fThread = ref('');
+const typeOptions = computed(() => [
+  { text: '全部类型', value: '' },
+  ...THOUGHT_KINDS.map((k) => ({ text: k, value: k })),
+  { text: '记录', value: '记录' },
+  { text: '小结', value: '小结' },
+]);
+const subjectOptions = computed(() => [{ text: '全部对象', value: '' }, ...subjectStore.active.map((s) => ({ text: s.name, value: s.id }))]);
+const threadOptions = computed(() => [{ text: '全部线索', value: '' }, ...eventStore.threads.map((e) => ({ text: e.title.slice(0, 12), value: e.id }))]);
+watch([fType, fSubject, fThread], () => { limit.value = PAGE_SIZE; });
+
 // —— 统一记录时间线:thoughts(独立/挂对象/挂线索的随手记) + eventEntries(线索过程记录) ——
 const feed = computed(() => {
   const items = [];
@@ -69,7 +83,11 @@ const feed = computed(() => {
       subjectId: (eventStore.byId(en.eventId)?.subjectIds || [])[0] || '', eventId: en.eventId,
     });
   }
-  return items.sort((a, b) => b.at - a.at);
+  let arr = items.sort((a, b) => b.at - a.at);
+  if (fType.value) arr = arr.filter((it) => it.kind === fType.value);
+  if (fSubject.value) arr = arr.filter((it) => it.subjectId === fSubject.value);
+  if (fThread.value) arr = arr.filter((it) => it.eventId === fThread.value);
+  return arr;
 });
 
 // 分页渲染:默认最近 50 条,底部「加载更多」继续(几千条时手机不卡)
@@ -218,6 +236,12 @@ function onSheetSelect(a) {
         </div>
       </template>
     </div>
+
+    <van-dropdown-menu v-if="feed.length || fType || fSubject || fThread">
+      <van-dropdown-item v-model="fType" :options="typeOptions" title="类型" />
+      <van-dropdown-item v-model="fSubject" :options="subjectOptions" title="对象" />
+      <van-dropdown-item v-model="fThread" :options="threadOptions" title="线索" />
+    </van-dropdown-menu>
 
     <!-- 记录流 -->
     <template v-for="[label, list] in groups" :key="label">

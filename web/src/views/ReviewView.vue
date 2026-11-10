@@ -8,6 +8,7 @@ import { useThoughtStore } from '../stores/thought.js';
 import { usePredictionStore } from '../stores/prediction.js';
 import { useCatalogStore } from '../stores/catalog.js';
 import { calibrationBuckets, PREDICTION_VERIFIED, PREDICTION_KINDS } from '../lib/domain.js';
+import { TRIGGER_ICON } from '../lib/display.js';
 import { weekRange, fmtDate } from '../lib/time.js';
 
 const router = useRouter();
@@ -60,6 +61,22 @@ const sceneFreq = computed(() => {
     .map(([id, n]) => ({ name: catalog.catName(id), n, pct: Math.round((n / max) * 100), color: catalog.catColor(id) }));
 });
 
+// 本周触发源分布:什么最容易引发记录(想法 source 与线索过程记录合并统计)
+const triggerStats = computed(() => {
+  const counts = new Map();
+  const bump = (k) => { const key = k || '无触发源'; counts.set(key, (counts.get(key) || 0) + 1); };
+  for (const t of weekThoughts.value) {
+    const m = String(t.source || '').match(/^由(.+?)触发/);
+    bump(m ? m[1] : (t.source ? '其他来源' : ''));
+  }
+  for (const en of weekEntries.value) bump(en.triggerKind || (en.triggerNote ? '其他来源' : ''));
+  const total = [...counts.values()].reduce((a, b) => a + b, 0) || 1;
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([k, n]) => ({ k, n, pct: Math.round((n / total) * 100), icon: TRIGGER_ICON[k] || (k === '无触发源' ? '○' : '💭') }));
+});
+
 const todos = computed(() => [
   { label: '本周记录', n: weekThoughts.value.length + weekEntries.value.length, to: '/' },
   { label: '活跃线索', n: eventStore.threads.filter((e) => e.updatedAt >= range.value.start || (eventStore.entriesOf(e.id)[0]?.at ?? 0) >= range.value.start).length, to: '/events' },
@@ -95,6 +112,15 @@ const todos = computed(() => [
         <span class="todo-right" :class="{ hot: t.label === '待验证预判' && t.n > 0 }">{{ t.n }} {{ t.label === '待验证预判' ? '条 ›' : '›' }}</span>
       </div>
       <div v-if="weekVerified.length" class="muted" style="margin-top: 8px">本周完成验证 {{ weekVerified.length }} 条预判</div>
+    </div>
+
+    <div class="card" v-if="triggerStats.length">
+      <div class="section-title" style="margin-top: 0">本周触发源 · 什么最容易引发记录</div>
+      <div v-for="t in triggerStats" :key="t.k" class="bar-row">
+        <span class="name">{{ t.icon }} {{ t.k }}</span>
+        <div class="track"><div class="fill" :style="{ width: t.pct + '%', '--c': 'var(--brand)' }"></div></div>
+        <span class="val">{{ t.n }} 次</span>
+      </div>
     </div>
 
     <div class="card" v-if="sceneFreq.length">

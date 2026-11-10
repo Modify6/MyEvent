@@ -48,6 +48,7 @@ export const useEventStore = defineStore('event', {
         location: '',
         startAt: startAt || Date.now(),
         endAt: endAt ?? null,
+        threadState: 'open',
         createdAt: Date.now(),
       };
       await putRow('events', ev);
@@ -110,6 +111,13 @@ export const useEventStore = defineStore('event', {
     },
     async removeEntry(id) {
       await softDelete('eventEntries', id);
+    },
+    // 线索软收尾:完结/搁置/重新打开 —— 纯手动,过程全保留,不产生任何提醒
+    async setThreadState(id, state) {
+      const ev = this.byId(id);
+      if (!ev || !['open', 'done', 'shelved'].includes(state)) return;
+      await putRow('events', { ...ev, threadState: state });
+      logInfo('event', `线索状态 → ${state === 'done' ? '已完结' : state === 'shelved' ? '已搁置' : '进行中'}`);
     },
   },
 });

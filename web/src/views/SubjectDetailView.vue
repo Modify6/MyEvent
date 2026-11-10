@@ -53,6 +53,18 @@ const hitStat = computed(() => {
   return { total: subjectPredictions.value.length, done: done.length, rate: done.length ? Math.round((score / done.length) * 100) : null };
 });
 
+// 观点快照温和提醒:超 30 天未更新且期间有新记录时提示(纯被动,不做任何催促)
+const snapshotHint = computed(() => {
+  const sub = subject.value;
+  if (!sub?.currentView) return '';
+  const days = Math.floor((Date.now() - (sub.updatedAt || sub.createdAt || 0)) / 86_400_000);
+  if (days < 30) return '';
+  const since = sub.updatedAt || 0;
+  const newCount = thoughtStore.ofSubject(sub.id).filter((t) => t.at > since).length
+    + eventStore.active.filter((e) => (e.subjectIds || []).includes(sub.id) && e.updatedAt > since).length;
+  return `观点已 ${days} 天未更新,期间新增 ${newCount} 条记录 —— 可基于它们更新当前观点`;
+});
+
 const nextReviewIn = computed(() => {
   const t = subject.value?.nextReviewAt;
   if (!t) return '';
@@ -92,6 +104,7 @@ function goTimeline(it) {
       <template v-if="subject.currentView">
         <div class="view-text">{{ subject.currentView }}</div>
         <ConfidenceBar :value="subject.currentConfidence" size="lg" style="margin-top: 10px" />
+        <div v-if="snapshotHint" class="snap-hint">💡 {{ snapshotHint }}</div>
         <template v-if="subject.topReasons?.length">
           <div class="block-label">核心理由</div>
           <ul class="reason-list">
@@ -199,6 +212,7 @@ function goTimeline(it) {
 .reason-list { margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-2); line-height: 1.8; }
 .quick-row { display: flex; gap: 10px; }
 .hint-line { font-size: 12px; color: var(--text-3); margin: -6px 2px 8px; line-height: 1.6; }
+.snap-hint { font-size: 12px; color: #f5a623; margin-top: 8px; line-height: 1.6; }
 .quick-row .van-button { flex: 1; }
 .tl-line { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
 .tl-line:last-child { border-bottom: 0; }

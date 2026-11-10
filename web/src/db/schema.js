@@ -52,6 +52,20 @@ db.version(3).stores({
   logs: '++id, at',
 });
 
+// v4:线索软收尾——threadState(open 进行中 / done 已完结 / shelved 已搁置),纯手动标记,与旧复盘 status 字段无关
+db.version(4).stores({
+  events: 'id, categoryId, *subjectIds, status, threadState, startAt, endAt, reviewedAt, createdAt, updatedAt, deleted',
+  categories: 'id, name, updatedAt, deleted',
+  subjects: 'id, name, type, nextReviewAt, createdAt, updatedAt, deleted',
+  thoughts: 'id, subjectId, kind, state, at, createdAt, updatedAt, deleted',
+  predictions: 'id, subjectId, kind, status, windowEnd, verifiedAt, createdAt, updatedAt, deleted',
+  rules: 'id, validity, scene, createdAt, updatedAt, deleted',
+  eventEntries: 'id, eventId, at, createdAt, updatedAt, deleted',
+  outbox: '++seq, key',
+  meta: 'key',
+  logs: '++id, at',
+});
+
 // 供 E2E 数据库级断言（Playwright）
 if (typeof window !== 'undefined') window.__myeventDebug = { db };
 

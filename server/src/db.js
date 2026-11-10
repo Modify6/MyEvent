@@ -9,7 +9,7 @@ import crypto from 'node:crypto';
 export const TABLES = {
   categories: ['id', 'name', 'color', 'sort', 'createdAt', 'updatedAt', 'deleted'],
   events: [
-    'id', 'title', 'categoryId', 'subjectIds', 'fact', 'status', 'review', 'location', 'note',
+    'id', 'title', 'categoryId', 'subjectIds', 'fact', 'status', 'threadState', 'review', 'location', 'note',
     'startAt', 'endAt', 'reviewedAt', 'ruleId', 'createdAt', 'updatedAt', 'deleted',
   ],
   subjects: [
