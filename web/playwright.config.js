@@ -12,14 +12,14 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   use: {
-    baseURL: 'http://localhost:3128',
+    baseURL: 'http://localhost:3129',
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
     viewport: { width: 390, height: 844 },
   },
   webServer: {
     command: 'node ../server/src/index.js',
-    url: 'http://localhost:3128/api/health',
+    url: 'http://localhost:3129/api/health',
     reuseExistingServer: !process.env.CI,
     timeout: 20_000,
   },

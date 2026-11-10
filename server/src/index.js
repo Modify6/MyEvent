@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { openDb, pushChanges, pullSince, exportAll, createBackupSnapshot, listBackups, isBackupName, TABLES } from './db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PORT = Number(process.env.PORT || 3128);
+const PORT = Number(process.env.PORT || 3129);
 const PASSWORD = process.env.MYEVENT_PASSWORD || 'mytime123';
 // 由密码派生 token，服务端无会话状态；改密码即全部失效
 const TOKEN = crypto.createHmac('sha256', PASSWORD).update('mytime-token-v1').digest('hex');

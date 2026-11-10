@@ -17,7 +17,7 @@ systemctl restart myevent
 sleep 2
 
 echo "== 4/4 健康检查 =="
-curl -s http://127.0.0.1:3128/api/health && echo
+curl -s http://127.0.0.1:3129/api/health && echo
 echo "服务状态: $(systemctl is-active myevent)"
 echo "当前部署版本: $(git log --oneline -1)"
 echo "完成。网页端如仍显示旧版，刷新一次即可（Service Worker 更新）；APK 需安装对应版本的安装包。"

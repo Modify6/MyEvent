@@ -17,7 +17,7 @@ cp deploy.config.example config   # 然后编辑 config 填真实值
 | SERVER_USER | SSH 用户（轻量默认 `ubuntu`） |
 | SERVER_PORT | SSH 端口（默认 22） |
 | DOMAIN | 你的域名（如 `myevent.example.com`，不要带 https://） |
-| APP_PORT | 保持 3128 |
+| APP_PORT | 保持 3129 |
 | ALLOWED_ORIGIN | 填 `https://你的域名`（CORS 收紧到自己的站点） |
 
 并在域名控制台添加 **A 记录**：`@`（或子域名）→ 服务器公网 IP。

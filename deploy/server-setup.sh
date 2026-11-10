@@ -14,7 +14,7 @@ NODE_VER=22.14.0
 
 source "$APP_DIR/deploy/config"
 DOMAIN=${DOMAIN:-}
-APP_PORT=${APP_PORT:-3128}
+APP_PORT=${APP_PORT:-3129}
 
 echo "== [1/6] Node $NODE_VER (Tsinghua mirror) =="
 if ! command -v node >/dev/null 2>&1 || [ "$(node -v | cut -dv -f2 | cut -d. -f1)" -lt 22 ]; then
@@ -48,7 +48,7 @@ if [ ! -f "$ENV_FILE" ]; then
   PASS=$(head -c 18 /dev/urandom | base64 | tr '+/' '-_')
   install -m 600 /dev/null "$ENV_FILE"
   echo "MYEVENT_PASSWORD=$PASS" > "$ENV_FILE"
-  echo "PORT=${APP_PORT:-3128}" >> "$ENV_FILE"
+  echo "PORT=${APP_PORT:-3129}" >> "$ENV_FILE"
   [ -n "${ALLOWED_ORIGIN:-}" ] && echo "ALLOWED_ORIGIN=$ALLOWED_ORIGIN" >> "$ENV_FILE"
 fi
 install -m 644 "$APP_DIR/deploy/myevent.service" /etc/systemd/system/myevent.service
@@ -60,20 +60,20 @@ if [ -n "${DOMAIN:-}" ]; then
   echo "== [5/6] Caddy reverse proxy (HTTPS) =="
   cat > /etc/caddy/Caddyfile <<EOF
 $DOMAIN {
-    reverse_proxy 127.0.0.1:${APP_PORT:-3128}
+    reverse_proxy 127.0.0.1:${APP_PORT:-3129}
 }
 EOF
   systemctl enable --now caddy
   systemctl restart caddy
 else
   SERVER_IP=$(curl -fsS --max-time 5 http://100.100.100.200/latest/meta-data/eipv4 2>/dev/null || echo '<server-ip>')
-  echo "== [5/6] DOMAIN empty — Caddy skipped (HTTP mode: http://$SERVER_IP:${APP_PORT:-3128}) =="
+  echo "== [5/6] DOMAIN empty — Caddy skipped (HTTP mode: http://$SERVER_IP:${APP_PORT:-3129}) =="
   echo "   After ICP filing: set DOMAIN in deploy/config, re-run upload.sh for HTTPS."
 fi
 
 echo "== [6/6] Health check =="
 sleep 2
-curl -fsS "http://127.0.0.1:${APP_PORT:-3128}/api/health" >/dev/null && echo "local health: OK"
+curl -fsS "http://127.0.0.1:${APP_PORT:-3129}/api/health" >/dev/null && echo "local health: OK"
 systemctl is-active myevent
 [ -n "${DOMAIN:-}" ] && systemctl is-active caddy
 

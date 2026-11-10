@@ -44,7 +44,7 @@ tar -czf - \
 
 echo "== 远端执行 server-setup.sh（装 Node/Caddy、构建、systemd、Caddy 自动 HTTPS）=="
 "$SSH_CMD" "${SSH_OPTS[@]}" -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" \
-  "cd /opt/myevent && sudo DOMAIN='$DOMAIN' APP_PORT='${APP_PORT:-3128}' bash deploy/server-setup.sh"
+  "cd /opt/myevent && sudo DOMAIN='$DOMAIN' APP_PORT='${APP_PORT:-3129}' bash deploy/server-setup.sh"
 
 echo
 echo "部署完成。验证: https://$DOMAIN/api/health"

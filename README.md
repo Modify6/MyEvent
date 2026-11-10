@@ -18,7 +18,7 @@ PWA + 安卓 APK（com.myevent.app）+ 自建同步服务，本地优先、单�
 ```bash
 npm install && npm install --prefix server && npm install --prefix web
 npm run dev      # 开发模式 http://localhost:5173
-npm run build && npm start   # 生产模式 http://localhost:3128
+npm run build && npm start   # 生产模式 http://localhost:3129
 npm test         # 单元测试
 ```
 

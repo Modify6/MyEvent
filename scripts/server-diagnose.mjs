@@ -5,7 +5,7 @@ import { execSync } from 'node:child_process';
 
 const env = fs.readFileSync('/opt/mytime/server/.env', 'utf8');
 const pass = env.match(/MYTIME_PASSWORD=(.*)/)?.[1]?.trim();
-const port = env.match(/PORT=(.*)/)?.[1]?.trim() || '3128';
+const port = env.match(/PORT=(.*)/)?.[1]?.trim() || '3129';
 
 console.log('== 1. auth ==');
 let token;
