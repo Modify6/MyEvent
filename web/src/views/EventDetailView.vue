@@ -111,9 +111,10 @@ async function removeThread() {
         <van-button type="primary" size="small" round icon="edit" @click="showNote = true">记一笔</van-button>
         <van-button plain type="primary" size="small" round icon="notes-o" @click="showSummary = true">写小结</van-button>
       </div>
+      <div class="hint-line">记一笔 = 过程中的一个点(新进展/新信息/新想法) · 写小结 = 阶段性回顾,想到哪写到哪,随时可再补</div>
     </div>
 
-    <div class="section-title">过程时间线</div>
+    <div class="section-title">过程时间线<span class="tl-legend">记录 = 过程中的一个点 · 小结会高亮 · 「挂记」= 从记录流挂过来的想法</span></div>
     <div class="card" v-if="timeline.length">
       <div v-for="it in timeline" :key="it.key">
         <div
@@ -165,6 +166,8 @@ async function removeThread() {
 .chips-row .chip { cursor: pointer; }
 .fact { font-size: 13px; color: var(--text-2); margin-top: 8px; line-height: 1.6; }
 .btn-row { display: flex; gap: 10px; margin-top: 12px; }
+.hint-line { font-size: 12px; color: var(--text-3); margin-top: 8px; line-height: 1.6; }
+.tl-legend { font-size: 11px; color: var(--text-3); font-weight: 400; margin-left: 8px; }
 .tl-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); align-items: flex-start; }
 .tl-item:last-child { border-bottom: 0; }
 .tl-item.summary { background: color-mix(in srgb, var(--brand) 5%, transparent); border-radius: 8px; padding: 10px 8px; margin: 4px 0; border-bottom: 0; }

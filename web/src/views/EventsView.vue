@@ -27,6 +27,7 @@ const lastAt = (e) => {
       <van-button size="small" round type="primary" icon="plus" @click="showNew = true">新线索</van-button>
     </div>
 
+    <div class="hint-line">线索 = 一件持续跟进的事;所有过程记录、想法、小结都挂在它的时间线上,点进去看完整演化</div>
     <div v-if="store.threads.length" class="card">
       <div v-for="e in store.threads" :key="e.id" class="ev-item" @click="router.push(`/events/${e.id}`)">
         <div class="ev-main">
@@ -53,6 +54,7 @@ const lastAt = (e) => {
 </template>
 
 <style scoped>
+.hint-line { font-size: 12px; color: var(--text-3); margin: -2px 2px 8px; }
 .ev-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
 .ev-item:last-child { border-bottom: 0; }
 .ev-main { flex: 1; min-width: 0; }

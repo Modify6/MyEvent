@@ -32,6 +32,7 @@ const current = computed(() => groups.value[tab.value]);
       <van-button size="small" round type="primary" icon="plus" @click="showForm = true">新预判</van-button>
     </div>
 
+    <div class="hint-line">预判 = 可证伪的判断:锁定后原始判断不可改,到期按提交时定的标准验证 —— 用来校准你的自信,按需使用</div>
     <div class="seg" style="margin-bottom: 12px">
       <button :class="{ active: tab === 0 }" @click="tab = 0">进行中 {{ store.running.length }}</button>
       <button :class="{ active: tab === 1 }" @click="tab = 1">待验证 {{ store.due.length }}</button>
@@ -64,6 +65,7 @@ const current = computed(() => groups.value[tab.value]);
 </template>
 
 <style scoped>
+.hint-line { font-size: 12px; color: var(--text-3); margin: -2px 2px 8px; line-height: 1.6; }
 .pred-line { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
 .pred-line:last-child { border-bottom: 0; }
 .row-main { flex: 1; min-width: 0; }

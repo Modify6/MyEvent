@@ -140,6 +140,7 @@ const showGuide = ref(false);
     </div>
 
     <!-- 快捷输入:内容即可发送;细节全部可选展开 -->
+    <div class="hint-line">点击记录 = 修改 · 长按 = 编辑/删除;# 线索、@ 对象标签可点跳转</div>
     <div class="card quick">
       <van-field
         v-model="form.content"
@@ -234,6 +235,7 @@ const showGuide = ref(false);
 
 <style scoped>
 .head-icons { display: flex; gap: 16px; color: var(--text-2); cursor: pointer; }
+.hint-line { font-size: 12px; color: var(--text-3); margin: -2px 2px 8px; }
 .quick { padding-bottom: 10px; }
 .quick-input :deep(.van-field__control) { font-size: 15px; }
 .quick-foot { display: flex; justify-content: space-between; padding: 4px 2px 0; }

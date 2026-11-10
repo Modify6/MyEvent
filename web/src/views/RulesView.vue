@@ -48,6 +48,7 @@ async function mark(r, valid) {
     </div>
 
     <van-search v-model="q" placeholder="搜场景 / 信号 / 规则内容" shape="round" background="transparent" />
+    <div class="hint-line">规则 = 沉淀下来的「遇到 X 就怎么做」;实际用了一次,就点下面的「这次有效/无效」登记 —— 让规则自己被验证</div>
 
     <div class="seg" style="margin-bottom: 12px">
       <button v-for="t in tabs" :key="t.key" :class="{ active: filter === t.key }" @click="filter = t.key">{{ t.label }}</button>
@@ -79,6 +80,7 @@ async function mark(r, valid) {
 </template>
 
 <style scoped>
+.hint-line { font-size: 12px; color: var(--text-3); margin: -4px 2px 8px; line-height: 1.6; }
 .rule-card { padding: 14px; }
 .rule-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .rule-content { font-size: 15px; font-weight: 700; line-height: 1.6; }
