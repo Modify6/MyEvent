@@ -81,14 +81,16 @@ const JSON_DEFAULTS = {
   lockSnapshot: null,
   refEvents: [],
   refPredictions: [],
+  edits: [],
 };
 
 export const JSON_COLS = {
   events: ['subjectIds', 'review'],
   subjects: ['tags', 'topReasons'],
-  thoughts: [],
+  thoughts: ['edits'],
   predictions: ['basis', 'criteria', 'result', 'lockSnapshot'],
   rules: ['refEvents', 'refPredictions'],
+  eventEntries: ['edits'],
 };
 
 export function normalizeRow(table, row) {

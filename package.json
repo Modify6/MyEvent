@@ -1,6 +1,6 @@
 {
   "name": "myevent",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "type": "module",
   "description": "MyEvent 个人认知复盘系统：对象 / 事件复盘 / 想法 / 预判验证 / 经验规则",

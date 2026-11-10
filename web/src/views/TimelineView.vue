@@ -8,6 +8,7 @@ import dayjs from 'dayjs';
 import { useThoughtStore } from '../stores/thought.js';
 import { useEventStore } from '../stores/event.js';
 import { useSubjectStore } from '../stores/subject.js';
+import NoteEditor from '../components/NoteEditor.vue';
 import { THOUGHT_KINDS, TRIGGER_KINDS } from '../lib/domain.js';
 import { fmtTime } from '../lib/time.js';
 
@@ -47,17 +48,17 @@ const feed = computed(() => {
   const items = [];
   for (const t of thoughtStore.active) {
     items.push({
-      key: 't:' + t.id, kind: t.kind, content: t.content, at: t.at,
-      trigger: t.source || '', summary: false,
+      key: 't:' + t.id, type: 't', raw: t, kind: t.kind, content: t.content, at: t.at,
+      trigger: t.source || '', summary: false, edited: (t.edits || []).length > 0,
       subjectId: t.subjectId || '', eventId: t.relatedEventId || '',
     });
   }
   for (const en of eventStore.entries) {
     if (en.deleted) continue;
     items.push({
-      key: 'e:' + en.id, kind: en.kind === 'summary' ? '小结' : '记录', content: en.content, at: en.at,
+      key: 'e:' + en.id, type: 'e', raw: en, kind: en.kind === 'summary' ? '小结' : '记录', content: en.content, at: en.at,
       trigger: en.triggerKind ? `由${en.triggerKind}触发${en.triggerNote ? ':' + en.triggerNote : ''}` : (en.triggerNote || ''),
-      summary: en.kind === 'summary',
+      summary: en.kind === 'summary', edited: (en.edits || []).length > 0,
       subjectId: (eventStore.byId(en.eventId)?.subjectIds || [])[0] || '', eventId: en.eventId,
     });
   }
@@ -78,6 +79,18 @@ const groups = computed(() => {
 
 const subjectName = (id) => subjectStore.nameOf(id);
 const eventTitle = (id) => eventStore.byId(id)?.title || '线索';
+
+// 二次修改:左滑编辑/删除;旧值自动存入修订历史
+const showEditor = ref(false);
+const editItem = ref(null);
+function openEdit(it) {
+  editItem.value = it;
+  showEditor.value = true;
+}
+async function removeItem(it) {
+  if (it.type === 't') await thoughtStore.remove(it.raw.id);
+  else await eventStore.removeEntry(it.raw.id);
+}
 </script>
 
 <template>
@@ -130,25 +143,34 @@ const eventTitle = (id) => eventStore.byId(id)?.title || '线索';
     <template v-for="[label, list] in groups" :key="label">
       <div class="section-title">{{ label }} · {{ list.length }}</div>
       <div class="card">
-        <div v-for="it in list" :key="it.key" class="feed-item" :class="{ summary: it.summary }">
-          <div class="feed-kind" :class="{ 'k-summary': it.summary }">{{ it.kind }}</div>
-          <div class="row-main">
-            <div class="feed-text">{{ it.content }}</div>
-            <div class="muted">
-              {{ fmtTime(it.at) }}
-              <template v-if="it.trigger"> · {{ it.trigger }}</template>
-            </div>
-            <div class="feed-chips">
-              <span v-if="it.eventId" class="chip" @click="router.push(`/events/${it.eventId}`)"># {{ eventTitle(it.eventId) }}</span>
-              <span v-if="it.subjectId" class="chip" @click="router.push(`/subjects/${it.subjectId}`)">@ {{ subjectName(it.subjectId) }}</span>
+        <van-swipe-cell v-for="it in list" :key="it.key">
+          <template #right>
+            <van-button square type="primary" text="编辑" class="swipe-btn" @click="openEdit(it)" />
+            <van-button square type="danger" text="删除" class="swipe-btn" @click="removeItem(it)" />
+          </template>
+          <div class="feed-item" :class="{ summary: it.summary }">
+            <div class="feed-kind" :class="{ 'k-summary': it.summary }">{{ it.kind }}</div>
+            <div class="row-main">
+              <div class="feed-text">{{ it.content }}</div>
+              <div class="muted">
+                {{ fmtTime(it.at) }}
+                <template v-if="it.edited"> · 已编辑</template>
+                <template v-if="it.trigger"> · {{ it.trigger }}</template>
+              </div>
+              <div class="feed-chips">
+                <span v-if="it.eventId" class="chip" @click="router.push(`/events/${it.eventId}`)"># {{ eventTitle(it.eventId) }}</span>
+                <span v-if="it.subjectId" class="chip" @click="router.push(`/subjects/${it.subjectId}`)">@ {{ subjectName(it.subjectId) }}</span>
+              </div>
             </div>
           </div>
-        </div>
+        </van-swipe-cell>
       </div>
     </template>
     <div v-if="!feed.length" class="card">
       <div class="empty-tip">还没有记录 —— 上面输入框里写一句,3 秒记下第一笔</div>
     </div>
+
+    <NoteEditor v-model:show="showEditor" :thought="editItem?.type === 't' ? editItem.raw : null" :entry="editItem?.type === 'e' ? editItem.raw : null" @saved="editItem = null" />
   </div>
 </template>
 
@@ -170,4 +192,6 @@ const eventTitle = (id) => eventStore.byId(id)?.title || '线索';
 .feed-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .feed-chips { margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; }
 .feed-chips .chip { cursor: pointer; }
+.swipe-btn { height: 100%; }
+.feed-item :deep(.van-swipe-cell__wrapper) { overflow: hidden; }
 </style>

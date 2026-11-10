@@ -46,6 +46,25 @@ export const useThoughtStore = defineStore('thought', {
       logInfo('thought', `随手记一条(${row.kind})`);
       return row;
     },
+    // 二次修改:新值生效,旧值存入 edits 修订历史(改变要有记录)
+    async edit(id, { content, kind, at, subjectId, relatedEventId }) {
+      const t = this.byId(id);
+      if (!t) throw new Error('记录不存在');
+      const text = String(content ?? t.content).trim();
+      if (!text) throw new Error('内容不能为空');
+      const next = {
+        ...t,
+        content: text,
+        kind: kind ? (THOUGHT_KINDS.includes(kind) ? kind : t.kind) : t.kind,
+        at: at ?? t.at,
+        subjectId: subjectId !== undefined ? subjectId : t.subjectId,
+        relatedEventId: relatedEventId !== undefined ? relatedEventId : t.relatedEventId,
+        edits: [...(t.edits || []), { at: Date.now(), content: t.content, kind: t.kind, source: t.source || '' }],
+      };
+      await putRow('thoughts', next);
+      logInfo('thought', '修改一条记录(已留痕)');
+      return next;
+    },
     async remove(id) {
       await softDelete('thoughts', id);
     },

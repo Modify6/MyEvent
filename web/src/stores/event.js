@@ -90,6 +90,24 @@ export const useEventStore = defineStore('event', {
       logInfo('event', kind === 'summary' ? '写小结' : `追加过程记录(${row.triggerKind || '无触发源'})`);
       return row;
     },
+    // 二次修改过程记录/小结:新值生效,旧值存入 edits 修订历史(改变要有记录)
+    async editEntry(id, { content, triggerKind, triggerNote, at }) {
+      const en = this.entries.find((x) => x.id === id && !x.deleted);
+      if (!en) throw new Error('记录不存在');
+      const text = String(content ?? en.content).trim();
+      if (!text) throw new Error('内容不能为空');
+      const next = {
+        ...en,
+        content: text,
+        triggerKind: triggerKind !== undefined ? (TRIGGER_KINDS.includes(triggerKind) ? triggerKind : '') : en.triggerKind,
+        triggerNote: triggerNote !== undefined ? String(triggerNote).trim() : en.triggerNote,
+        at: at ?? en.at,
+        edits: [...(en.edits || []), { at: Date.now(), content: en.content, triggerKind: en.triggerKind || '', triggerNote: en.triggerNote || '' }],
+      };
+      await putRow('eventEntries', next);
+      logInfo('event', '修改过程记录(已留痕)');
+      return next;
+    },
     async removeEntry(id) {
       await softDelete('eventEntries', id);
     },

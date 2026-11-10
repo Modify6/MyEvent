@@ -9,6 +9,7 @@ import { useThoughtStore } from '../stores/thought.js';
 import { useSubjectStore } from '../stores/subject.js';
 import { useCatalogStore } from '../stores/catalog.js';
 import NoteComposer from '../components/NoteComposer.vue';
+import NoteEditor from '../components/NoteEditor.vue';
 import { fmtDate, fmtTime } from '../lib/time.js';
 
 const route = useRoute();
@@ -26,22 +27,32 @@ const timeline = computed(() => {
   const items = [];
   for (const en of eventStore.entriesOf(eid.value)) {
     items.push({
-      key: 'en:' + en.id, kind: en.kind === 'summary' ? '小结' : '记录', summary: en.kind === 'summary',
-      content: en.content, at: en.at,
+      key: 'en:' + en.id, type: 'e', raw: en, kind: en.kind === 'summary' ? '小结' : '记录', summary: en.kind === 'summary',
+      content: en.content, at: en.at, edited: (en.edits || []).length > 0,
       trigger: en.triggerKind ? `由${en.triggerKind}触发${en.triggerNote ? ':' + en.triggerNote : ''}` : (en.triggerNote || ''),
-      removable: () => eventStore.removeEntry(en.id),
     });
   }
   for (const t of thoughtStore.ofEvent(eid.value)) {
     items.push({
-      key: 't:' + t.id, kind: t.kind + ' · 挂记', summary: false,
-      content: t.content, at: t.at,
+      key: 't:' + t.id, type: 't', raw: t, kind: t.kind + ' · 挂记', summary: false,
+      content: t.content, at: t.at, edited: (t.edits || []).length > 0,
       trigger: t.source || '',
-      removable: () => thoughtStore.remove(t.id),
     });
   }
   return items.sort((a, b) => b.at - a.at);
 });
+
+// 二次修改:左滑编辑/删除;旧值自动存入修订历史
+const showEditor = ref(false);
+const editItem = ref(null);
+function openEdit(it) {
+  editItem.value = it;
+  showEditor.value = true;
+}
+async function removeItem(it) {
+  if (it.type === 't') await thoughtStore.remove(it.raw.id);
+  else await eventStore.removeEntry(it.raw.id);
+}
 
 const showNote = ref(false);
 const showSummary = ref(false);
@@ -82,22 +93,29 @@ async function removeThread() {
 
     <div class="section-title">过程时间线</div>
     <div class="card" v-if="timeline.length">
-      <div v-for="it in timeline" :key="it.key" class="tl-item" :class="{ summary: it.summary }">
-        <div class="tl-kind" :class="{ 'k-summary': it.summary }">{{ it.kind }}</div>
-        <div class="row-main">
-          <div class="tl-text">{{ it.content }}</div>
-          <div class="muted">
-            {{ fmtDate(it.at) }} {{ fmtTime(it.at) }}
-            <template v-if="it.trigger"> · {{ it.trigger }}</template>
+      <van-swipe-cell v-for="it in timeline" :key="it.key">
+        <template #right>
+          <van-button square type="primary" text="编辑" class="swipe-btn" @click="openEdit(it)" />
+          <van-button square type="danger" text="删除" class="swipe-btn" @click="removeItem(it)" />
+        </template>
+        <div class="tl-item" :class="{ summary: it.summary }">
+          <div class="tl-kind" :class="{ 'k-summary': it.summary }">{{ it.kind }}</div>
+          <div class="row-main">
+            <div class="tl-text">{{ it.content }}</div>
+            <div class="muted">
+              {{ fmtDate(it.at) }} {{ fmtTime(it.at) }}
+              <template v-if="it.edited"> · 已编辑</template>
+              <template v-if="it.trigger"> · {{ it.trigger }}</template>
+            </div>
           </div>
         </div>
-        <van-icon name="cross" size="15" color="var(--text-3)" @click="it.removable()" />
-      </div>
+      </van-swipe-cell>
     </div>
     <div v-else class="card"><div class="empty-tip">还没有过程记录 —— 点「记一笔」开始记录变化过程</div></div>
 
     <NoteComposer v-model:show="showNote" :event-id="eid" />
     <NoteComposer v-model:show="showSummary" :event-id="eid" summary-mode />
+    <NoteEditor v-model:show="showEditor" :thought="editItem?.type === 't' ? editItem.raw : null" :entry="editItem?.type === 'e' ? editItem.raw : null" @saved="editItem = null" />
   </div>
   <div v-else class="page"><div class="card"><div class="empty-tip">线索不存在或已删除</div></div></div>
 </template>
@@ -118,4 +136,5 @@ async function removeThread() {
 .row-main { flex: 1; min-width: 0; }
 .tl-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .tl-item .van-icon { cursor: pointer; margin-top: 3px; flex: none; }
+.swipe-btn { height: 100%; }
 </style>
