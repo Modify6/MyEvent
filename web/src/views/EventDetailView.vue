@@ -93,6 +93,12 @@ const timelineFiltered = computed(() => {
   return timeline.value;
 });
 const showThreadEditor = ref(false);
+// 分页渲染:线索记录也可能越积越多
+const PAGE_SIZE = 50;
+const limit = ref(PAGE_SIZE);
+const tlShown = computed(() => timelineFiltered.value.slice(0, limit.value));
+const hasMore = computed(() => timelineFiltered.value.length > limit.value);
+const loadMore = () => { limit.value += PAGE_SIZE; };
 
 const showNote = ref(false);
 const showSummary = ref(false);
@@ -141,8 +147,8 @@ async function removeThread() {
       <button :class="{ active: tlFilter === 'idea' }" @click="tlFilter = 'idea'">只看想法</button>
       <button :class="{ active: tlFilter === 'summary' }" @click="tlFilter = 'summary'">只看小结</button>
     </div>
-    <div class="card" v-if="timelineFiltered.length">
-      <div v-for="it in timelineFiltered" :key="it.key">
+    <div class="card" v-if="tlShown.length">
+      <div v-for="it in tlShown" :key="it.key">
         <div
           class="tl-item"
           :class="{ summary: it.summary }"
@@ -164,7 +170,10 @@ async function removeThread() {
         </div>
       </div>
     </div>
-    <div v-else class="card"><div class="empty-tip">{{ timeline.length ? '这个过滤下没有记录' : '还没有过程记录 —— 点「记一笔」开始记录变化过程' }}</div></div>
+    <div v-if="hasMore" class="row-center" style="margin: 4px 0 8px">
+      <van-button plain round size="small" @click="loadMore">还有 {{ timelineFiltered.length - limit }} 条 · 加载更多</van-button>
+    </div>
+    <div v-else-if="!timelineFiltered.length" class="card"><div class="empty-tip">{{ timeline.length ? '这个过滤下没有记录' : '还没有过程记录 —— 点「记一笔」开始记录变化过程' }}</div></div>
 
     <NoteComposer v-model:show="showNote" :event-id="eid" />
     <NoteComposer v-model:show="showSummary" :event-id="eid" summary-mode />

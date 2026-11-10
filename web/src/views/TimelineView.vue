@@ -72,10 +72,17 @@ const feed = computed(() => {
   return items.sort((a, b) => b.at - a.at);
 });
 
-// 按天分组:今天 / 昨天 / M月D日
+// 分页渲染:默认最近 50 条,底部「加载更多」继续(几千条时手机不卡)
+const PAGE_SIZE = 50;
+const limit = ref(PAGE_SIZE);
+const rendered = computed(() => feed.value.slice(0, limit.value));
+const hasMore = computed(() => feed.value.length > limit.value);
+const loadMore = () => { limit.value += PAGE_SIZE; };
+
+// 按天分组:今天 / 昨天 / M月D日(仅对已渲染部分)
 const groups = computed(() => {
   const map = new Map();
-  for (const it of feed.value) {
+  for (const it of rendered.value) {
     const d = dayjs(it.at);
     const label = d.isSame(dayjs(), 'day') ? '今天' : d.isSame(dayjs().subtract(1, 'day'), 'day') ? '昨天' : d.format('M月D日');
     if (!map.has(label)) map.set(label, []);
@@ -246,6 +253,9 @@ function onSheetSelect(a) {
     <div v-if="!feed.length" class="card">
       <div class="empty-tip">还没有记录 —— 上面输入框里写一句,3 秒记下第一笔</div>
     </div>
+    <div v-if="hasMore" class="row-center" style="margin: 4px 0 8px">
+      <van-button plain round size="small" @click="loadMore">还有 {{ feed.length - limit }} 条 · 加载更多</van-button>
+    </div>
 
     <NoteEditor v-model:show="showEditor" :thought="editItem?.type === 't' ? editItem.raw : null" :entry="editItem?.type === 'e' ? editItem.raw : null" @saved="editItem = null" />
 
@@ -266,6 +276,7 @@ function onSheetSelect(a) {
 
 <style scoped>
 .head-icons { display: flex; gap: 16px; color: var(--text-2); cursor: pointer; }
+.row-center { display: flex; justify-content: center; }
 .hint-line { font-size: 12px; color: var(--text-3); margin: -2px 2px 8px; }
 .quick { padding-bottom: 10px; }
 .quick-input :deep(.van-field__control) { font-size: 15px; }
