@@ -31,12 +31,22 @@ const sections = computed(() => {
     {
       key: 'events',
       label: '事件',
-      items: lim(eventStore.active.filter((e) => hit(e.title) || hit(e.fact)).map((e) => ({ id: e.id, text: e.title, sub: e.status === 'reviewed' ? '已复盘' : '待复盘', to: '/events' }))),
+      items: lim(eventStore.active.filter((e) => hit(e.title) || hit(e.fact)).map((e) => ({ id: e.id, text: e.title, sub: '线索', to: `/events/${e.id}` }))),
     },
     {
       key: 'thoughts',
       label: '想法',
-      items: lim(thoughtStore.active.filter((t) => hit(t.content) || hit(t.basis)).map((t) => ({ id: t.id, text: t.content, sub: t.kind, to: '/' }))),
+      items: lim(
+        thoughtStore.active
+          .filter((t) => hit(t.content) || hit(t.basis))
+          .map((t) => ({
+            id: t.id,
+            text: t.content,
+            sub: t.kind,
+            // 直达所属:挂线索 → 线索页;挂对象 → 对象页;裸记 → 首页记录流
+            to: t.relatedEventId ? `/events/${t.relatedEventId}` : t.subjectId ? `/subjects/${t.subjectId}` : '/',
+          }))
+      ),
     },
     {
       key: 'predictions',

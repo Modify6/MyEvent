@@ -1,7 +1,7 @@
 <script setup>
 // 记录流首页:3 秒随手记(内容即可),全部记录按时间倒序混排(想法/事实/感想 + 线索过程记录)
 // 没有待办、没有必填 —— 重点是过程,持续记录,演化自然沉淀
-import { computed, reactive, ref } from 'vue';
+import { computed, nextTick, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { showFailToast, showSuccessToast } from 'vant';
 import dayjs from 'dayjs';
@@ -11,6 +11,8 @@ import { useSubjectStore } from '../stores/subject.js';
 import NoteEditor from '../components/NoteEditor.vue';
 import QuickCreate from '../components/QuickCreate.vue';
 import AttachGuide from '../components/AttachGuide.vue';
+import ConvertToThread from '../components/ConvertToThread.vue';
+import SyncDot from '../components/SyncDot.vue';
 import { THOUGHT_KINDS, TRIGGER_KINDS } from '../lib/domain.js';
 import { kindMeta, parseTrigger } from '../lib/display.js';
 import { fmtTime } from '../lib/time.js';
@@ -41,6 +43,8 @@ async function quickSend() {
     form.content = '';
     form.triggerNote = '';
     showSuccessToast('已记录');
+    // 连续记录:发送后焦点回到输入框
+    nextTick(() => document.querySelector('.quick-input textarea')?.focus());
   } catch (e) {
     showFailToast(e.message);
   }
@@ -135,6 +139,24 @@ function onQuickCreated(row) {
   else form.subjectId = row.id;
 }
 const showGuide = ref(false);
+// 一键转线索:想法长成事件时,长按菜单直达(建线索+原记录改挂)
+const showConvert = ref(false);
+function startConvert() {
+  showConvert.value = true;
+}
+// 操作菜单按记录类型动态生成:想法多一个「转为线索」
+const sheetActions = computed(() => {
+  const a = [{ name: '编辑', key: 'edit' }];
+  if (editItem.value?.type === 't') a.splice(1, 0, { name: '转为线索', key: 'convert' });
+  a.push({ name: '删除', key: 'remove', color: 'var(--danger)' });
+  return a;
+});
+function onSheetSelect(a) {
+  if (!editItem.value) return;
+  if (a.key === 'edit') openEdit(editItem.value);
+  else if (a.key === 'convert') startConvert();
+  else if (a.key === 'remove') removeItem(editItem.value);
+}
 </script>
 
 <template>
@@ -142,6 +164,7 @@ const showGuide = ref(false);
     <div class="page-head">
       <h1>记录</h1>
       <div class="head-icons">
+        <SyncDot />
         <van-icon name="search" size="20" @click="router.push('/search')" />
         <van-icon name="setting-o" size="20" @click="router.push('/settings')" />
       </div>
@@ -157,6 +180,7 @@ const showGuide = ref(false);
         autosize
         :placeholder="`随手记一句(${kind}…)`"
         class="quick-input"
+        @keydown.enter.exact.prevent="quickSend"
       />
       <div class="quick-foot">
         <van-button size="small" plain round @click="detail = !detail">{{ detail ? '收起细节' : '添加细节' }}</van-button>
@@ -230,14 +254,13 @@ const showGuide = ref(false);
 
     <van-action-sheet
       v-model:show="showActions"
-      :actions="[
-        { name: '编辑', key: 'edit' },
-        { name: '删除', key: 'remove', color: 'var(--danger)' },
-      ]"
+      :actions="sheetActions"
       cancel-text="取消"
       close-on-click-action
-      @select="(a) => (a.key === 'edit' ? openEdit(editItem) : removeItem(editItem))"
+      @select="onSheetSelect"
     />
+
+    <ConvertToThread v-model:show="showConvert" :thought="editItem?.type === 't' ? editItem.raw : null" @done="editItem = null" />
   </div>
 </template>
 

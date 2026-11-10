@@ -10,6 +10,7 @@ import { useSubjectStore } from '../stores/subject.js';
 import { useCatalogStore } from '../stores/catalog.js';
 import NoteComposer from '../components/NoteComposer.vue';
 import NoteEditor from '../components/NoteEditor.vue';
+import ThreadEditor from '../components/ThreadEditor.vue';
 import { kindMeta, parseTrigger } from '../lib/display.js';
 import { fmtDate, fmtTime } from '../lib/time.js';
 
@@ -84,6 +85,15 @@ const kindStyle = (k) => {
 const kindIcon = (k) => kindMeta(k.split(' · ')[0]).icon;
 const trig = (src) => parseTrigger(src);
 
+// 时间线过滤:全部 / 只看想法(挂记) / 只看小结 —— 看判断变化时聚焦
+const tlFilter = ref('all');
+const timelineFiltered = computed(() => {
+  if (tlFilter.value === 'idea') return timeline.value.filter((it) => it.type === 't');
+  if (tlFilter.value === 'summary') return timeline.value.filter((it) => it.summary);
+  return timeline.value;
+});
+const showThreadEditor = ref(false);
+
 const showNote = ref(false);
 const showSummary = ref(false);
 
@@ -102,7 +112,10 @@ async function removeThread() {
       <h1 class="head-name">
         <van-icon name="arrow-left" size="20" @click="router.back()" />{{ ev.title }}
       </h1>
-      <van-icon name="delete-o" size="20" color="var(--text-3)" @click="removeThread" />
+      <span class="head-actions">
+        <van-button size="small" plain round @click="showThreadEditor = true">编辑</van-button>
+        <van-icon name="delete-o" size="20" color="var(--text-3)" @click="removeThread" />
+      </span>
     </div>
 
     <div class="card">
@@ -123,8 +136,13 @@ async function removeThread() {
     </div>
 
     <div class="section-title">过程时间线<span class="tl-legend">记录 = 过程中的一个点 · 小结会高亮 · 「挂记」= 从记录流挂过来的想法</span></div>
-    <div class="card" v-if="timeline.length">
-      <div v-for="it in timeline" :key="it.key">
+    <div class="seg" v-if="timeline.length" style="margin-bottom: 10px">
+      <button :class="{ active: tlFilter === 'all' }" @click="tlFilter = 'all'">全部</button>
+      <button :class="{ active: tlFilter === 'idea' }" @click="tlFilter = 'idea'">只看想法</button>
+      <button :class="{ active: tlFilter === 'summary' }" @click="tlFilter = 'summary'">只看小结</button>
+    </div>
+    <div class="card" v-if="timelineFiltered.length">
+      <div v-for="it in timelineFiltered" :key="it.key">
         <div
           class="tl-item"
           :class="{ summary: it.summary }"
@@ -146,11 +164,12 @@ async function removeThread() {
         </div>
       </div>
     </div>
-    <div v-else class="card"><div class="empty-tip">还没有过程记录 —— 点「记一笔」开始记录变化过程</div></div>
+    <div v-else class="card"><div class="empty-tip">{{ timeline.length ? '这个过滤下没有记录' : '还没有过程记录 —— 点「记一笔」开始记录变化过程' }}</div></div>
 
     <NoteComposer v-model:show="showNote" :event-id="eid" />
     <NoteComposer v-model:show="showSummary" :event-id="eid" summary-mode />
     <NoteEditor v-model:show="showEditor" :thought="editItem?.type === 't' ? editItem.raw : null" :entry="editItem?.type === 'e' ? editItem.raw : null" @saved="editItem = null" />
+    <ThreadEditor v-model:show="showThreadEditor" :thread="ev" />
 
     <van-action-sheet
       v-model:show="showActions"
@@ -169,6 +188,7 @@ async function removeThread() {
 <style scoped>
 .head-name { display: flex; align-items: center; gap: 10px; }
 .head-name .van-icon { color: var(--text-2); cursor: pointer; }
+.head-actions { display: flex; align-items: center; gap: 12px; }
 .meta-row { display: flex; gap: 6px; }
 .chips-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 .chips-row .chip { cursor: pointer; }
