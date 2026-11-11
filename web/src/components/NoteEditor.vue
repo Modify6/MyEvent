@@ -150,7 +150,7 @@ async function save() {
           <button v-for="e in eventStore.threads.slice(0, 8)" :key="e.id" class="tag-chip" :class="{ active: form.eventId === e.id }" @click="form.eventId = form.eventId === e.id ? '' : e.id">{{ e.title.slice(0, 12) }}</button>
           <button class="tag-chip add-chip" @click="quickCreate('event')">+ 新建</button>
         </div>
-        <div class="block-label">挂到对象 · 关于谁</div>
+        <div class="block-label">🎯 挂到对象 · 关于谁</div>
         <div class="chip-row">
           <button v-for="s in subjectStore.active" :key="s.id" class="tag-chip" :class="{ active: form.subjectId === s.id }" @click="form.subjectId = form.subjectId === s.id ? '' : s.id">{{ s.name }}</button>
           <button class="tag-chip add-chip" @click="quickCreate('subject')">+ 新建</button>

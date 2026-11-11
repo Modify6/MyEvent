@@ -166,7 +166,7 @@ async function removeSubject() {
         <div v-if="nextReviewIn" class="muted" style="margin-top: 8px">📅 {{ nextReviewIn }}({{ dayjs(subject.nextReviewAt).format('M月D日') }})</div>
       </template>
       <template v-else>
-        <div class="empty-tip" style="padding: 10px 0">还没有形成当前观点 —— 记下你此刻的判断、置信度和最大反证</div>
+        <div class="empty-tip" style="padding: 10px 0">还没有形成当前观点 —— 记下你此刻的<b style="color: var(--brand)">判断</b>、<b style="color: #f5a623">置信度</b>和<b style="color: var(--danger)">最大反证</b></div>
         <van-button size="small" round type="primary" plain block @click="showForm = true">填写观点快照</van-button>
         <van-button v-if="viewDraft" size="small" plain block style="margin-top: 8px" @click="showForm = true">从最近记录生成草稿</van-button>
       </template>

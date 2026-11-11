@@ -6,6 +6,7 @@ import { showFailToast, showSuccessToast } from 'vant';
 import { useEventStore } from '../stores/event.js';
 import { useSubjectStore } from '../stores/subject.js';
 import { SUBJECT_TYPES } from '../lib/domain.js';
+import { typeColor } from '../lib/display.js';
 import AttachGuide from './AttachGuide.vue';
 
 const props = defineProps({
@@ -66,9 +67,9 @@ async function create() {
         @keyup.enter="create"
       />
       <template v-if="!isEvent()">
-        <div class="block-label">类型</div>
+        <div class="block-label">🎯 类型</div>
         <div class="chip-row">
-          <button v-for="t in SUBJECT_TYPES" :key="t" class="tag-chip" :class="{ active: subjectType === t }" @click="subjectType = t">{{ t }}</button>
+          <button v-for="t in SUBJECT_TYPES" :key="t" class="tag-chip" :class="{ active: subjectType === t }" :style="{ color: typeColor(t), borderColor: typeColor(t) + (subjectType === t ? '' : '59'), background: subjectType === t ? typeColor(t) + '1f' : 'transparent', fontWeight: subjectType === t ? 700 : 400 }" @click="subjectType = t">{{ t }}</button>
         </div>
       </template>
       <van-button type="primary" round block style="margin-top: 14px" @click="create">创建并挂靠</van-button>

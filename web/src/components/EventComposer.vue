@@ -6,6 +6,7 @@ import { useEventStore } from '../stores/event.js';
 import { useSubjectStore } from '../stores/subject.js';
 import { useCatalogStore } from '../stores/catalog.js';
 import { TRIGGER_KINDS } from '../lib/domain.js';
+import { trigChipStyle, TRIGGER_ICON } from '../lib/display.js';
 import { toLocalInput, fromLocalInput } from '../lib/time.js';
 
 const props = defineProps({
@@ -84,9 +85,9 @@ async function save() {
       <van-field v-model="form.title" placeholder="发生了什么?一句话标题 *" />
       <van-field v-model="form.fact" type="textarea" rows="2" autosize placeholder="一句话事实:只写客观发生了什么(选填)" />
 
-      <div class="block-label">触发源 —— 这件事由什么引发?(选填,记下出发原因)</div>
+      <div class="block-label">📌 触发源 —— 这件事由什么引发?(选填,记下出发原因)</div>
       <div class="chip-row">
-        <button v-for="k in TRIGGER_KINDS" :key="k" class="tag-chip" :class="{ active: triggerKind === k }" @click="triggerKind = triggerKind === k ? '' : k">{{ k }}</button>
+        <button v-for="k in TRIGGER_KINDS" :key="k" class="tag-chip" :class="{ active: triggerKind === k }" :style="trigChipStyle(k, triggerKind === k)" @click="triggerKind = triggerKind === k ? '' : k">{{ TRIGGER_ICON[k] }} {{ k }}</button>
       </div>
       <van-field v-model="form.triggerNote" type="textarea" rows="1" autosize placeholder="触发说明(选填),如:看了XX视频 / 和XX聊天时提到" />
 

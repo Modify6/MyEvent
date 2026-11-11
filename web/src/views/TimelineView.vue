@@ -15,7 +15,7 @@ import ConvertToThread from '../components/ConvertToThread.vue';
 import SyncDot from '../components/SyncDot.vue';
 import { THOUGHT_KINDS, TRIGGER_KINDS } from '../lib/domain.js';
 import { getLastAttach, setLastAttach } from '../auth/local.js';
-import { kindMeta, parseTrigger } from '../lib/display.js';
+import { kindChipStyle, kindMeta, trigChipStyle, TRIGGER_ICON, parseTrigger } from '../lib/display.js';
 import { fmtTime } from '../lib/time.js';
 
 const router = useRouter();
@@ -233,13 +233,13 @@ function onSheetSelect(a) {
           <span>上次挂靠</span>
           <span class="reattach" @click="reattachLast">⟲ 重挂{{ lastSubjectName ? ' @' + lastSubjectName : '' }}{{ lastEventTitle ? ' #' + lastEventTitle : '' }}</span>
         </div>
-        <div class="block-label">类型</div>
+        <div class="block-label">🏷 类型 · 这是一条什么性质的记录</div>
         <div class="chip-row">
-          <button v-for="k in THOUGHT_KINDS" :key="k" class="tag-chip" :class="{ active: kind === k }" @click="kind = k">{{ k }}</button>
+          <button v-for="k in THOUGHT_KINDS" :key="k" class="tag-chip" :class="{ active: kind === k }" :style="kindChipStyle(k, kind === k)" @click="kind = k">{{ kindMeta(k).icon }} {{ k }}</button>
         </div>
-        <div class="block-label">触发源</div>
+        <div class="block-label">📌 触发源 · 由什么引发</div>
         <div class="chip-row">
-          <button v-for="k in TRIGGER_KINDS" :key="k" class="tag-chip" :class="{ active: triggerKind === k }" @click="triggerKind = triggerKind === k ? '' : k">{{ k }}</button>
+          <button v-for="k in TRIGGER_KINDS" :key="k" class="tag-chip" :class="{ active: triggerKind === k }" :style="trigChipStyle(k, triggerKind === k)" @click="triggerKind = triggerKind === k ? '' : k">{{ TRIGGER_ICON[k] }} {{ k }}</button>
         </div>
         <van-field v-model="form.triggerNote" type="textarea" rows="1" autosize placeholder="触发说明(选填)" />
         <div class="block-label row-between">

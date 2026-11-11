@@ -6,6 +6,7 @@ import { showFailToast, showSuccessToast } from 'vant';
 import { useEventStore } from '../stores/event.js';
 import { useThoughtStore } from '../stores/thought.js';
 import { TRIGGER_KINDS, THOUGHT_KINDS } from '../lib/domain.js';
+import { kindChipStyle, kindMeta, trigChipStyle, TRIGGER_ICON } from '../lib/display.js';
 import { toLocalInput, fromLocalInput } from '../lib/time.js';
 
 const props = defineProps({
@@ -91,15 +92,15 @@ async function save() {
 
       <template v-if="!summaryMode">
         <template v-if="!eventId">
-          <div class="block-label">类型 · 这是一条什么性质的记录</div>
+          <div class="block-label">🏷 类型 · 这是一条什么性质的记录</div>
           <div class="chip-row">
-            <button v-for="k in THOUGHT_KINDS" :key="k" class="tag-chip" :class="{ active: kind === k }" @click="kind = k">{{ k }}</button>
+            <button v-for="k in THOUGHT_KINDS" :key="k" class="tag-chip" :class="{ active: kind === k }" :style="kindChipStyle(k, kind === k)" @click="kind = k">{{ kindMeta(k).icon }} {{ k }}</button>
           </div>
         </template>
 
-        <div class="block-label">触发源 · 由什么引发(选填)</div>
+        <div class="block-label">📌 触发源 · 由什么引发(选填)</div>
         <div class="chip-row">
-          <button v-for="k in TRIGGER_KINDS" :key="k" class="tag-chip" :class="{ active: triggerKind === k }" @click="triggerKind = triggerKind === k ? '' : k">{{ k }}</button>
+          <button v-for="k in TRIGGER_KINDS" :key="k" class="tag-chip" :class="{ active: triggerKind === k }" :style="trigChipStyle(k, triggerKind === k)" @click="triggerKind = triggerKind === k ? '' : k">{{ TRIGGER_ICON[k] }} {{ k }}</button>
         </div>
         <van-field v-model="form.triggerNote" type="textarea" rows="1" autosize placeholder="触发说明(选填),如:看了XX视频 / 和XX聊天" />
       </template>

@@ -55,3 +55,20 @@ export function avatarColor(id) {
   for (const c of String(id || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   return AVATAR_PALETTE[h % AVATAR_PALETTE.length];
 }
+
+// —— 弹层表单 chips:与时间线标签同色系 ——
+export const kindChipStyle = (k, active = false) => {
+  const m = KIND_META[k] || { color: '#98a2b3', icon: '📝' };
+  return {
+    color: m.color,
+    borderColor: m.color + (active ? '' : '59'),
+    background: active ? m.color + '1f' : 'transparent',
+    fontWeight: active ? 700 : 400,
+  };
+};
+export const trigChipStyle = (k, active = false) => ({
+  color: active ? '#4f6ef7' : 'inherit',
+  borderColor: active ? '#4f6ef7' : '',
+  background: active ? '#4f6ef71f' : 'transparent',
+  fontWeight: active ? 700 : 400,
+});

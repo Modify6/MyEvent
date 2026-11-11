@@ -48,7 +48,7 @@ async function mark(r, valid) {
     </div>
 
     <van-search v-model="q" placeholder="搜场景 / 信号 / 规则内容" shape="round" background="transparent" />
-    <div class="hint-line hint-brand">📜 规则 = 沉淀下来的「遇到 X 就怎么做」;实际用了一次,就点下面的「这次有效/无效」登记 —— 让规则自己被验证</div>
+    <div class="hint-line hint-brand">📜 <b>规则</b> = 沉淀下来的「遇到 X 就怎么做」;实际用了一次,就点下面的「这次<b style="color: #34c273">有效</b>/<b style="color: var(--danger)">无效</b>」登记 —— 让规则自己被验证</div>
 
     <div class="seg" style="margin-bottom: 12px">
       <button v-for="t in tabs" :key="t.key" :class="{ active: filter === t.key }" @click="filter = t.key">{{ t.label }}</button>
