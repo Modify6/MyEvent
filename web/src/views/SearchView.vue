@@ -69,6 +69,7 @@ const sections = computed(() => {
     </div>
 
     <van-search v-model="q" placeholder="搜对象 / 事件 / 想法 / 预判 / 规则" shape="round" background="transparent" />
+    <div class="hint-line">点击结果直达所属页面:想法 → 所在线索/对象,事件 → 线索详情</div>
 
     <template v-for="s in sections" :key="s.key">
       <div class="section-title">{{ s.label }} · {{ s.items.length }}</div>
@@ -88,6 +89,7 @@ const sections = computed(() => {
 </template>
 
 <style scoped>
+.hint-line { font-size: 12px; color: var(--text-3); margin: -2px 2px 8px; }
 .head-name { display: flex; align-items: center; gap: 10px; }
 .head-name .van-icon { color: var(--text-2); cursor: pointer; }
 .s-line { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); cursor: pointer; }

@@ -157,6 +157,7 @@ function distill() {
         <div class="pop-head"><span>验证预判</span><van-button size="small" plain round @click="showVerify = false">关闭</van-button></div>
         <van-field v-model="verifyForm.actual" type="textarea" rows="3" autosize label="实际结果 *" placeholder="实际发生了什么(只写当时应知的信息)" />
         <div class="block-label">按提交时的标准评分 *</div>
+        <div class="muted" style="margin: 0 16px 6px">按你锁定时写下的标准诚实地评 —— 校准的价值就在这里</div>
         <van-radio-group v-model="verifyForm.score" direction="horizontal" class="radio-row">
           <van-radio name="hit">命中</van-radio>
           <van-radio name="partial">部分命中</van-radio>

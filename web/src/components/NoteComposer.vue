@@ -91,13 +91,13 @@ async function save() {
 
       <template v-if="!summaryMode">
         <template v-if="!eventId">
-          <div class="block-label">类型</div>
+          <div class="block-label">类型 · 这是一条什么性质的记录</div>
           <div class="chip-row">
             <button v-for="k in THOUGHT_KINDS" :key="k" class="tag-chip" :class="{ active: kind === k }" @click="kind = k">{{ k }}</button>
           </div>
         </template>
 
-        <div class="block-label">触发源 —— 这条记录由什么引发?</div>
+        <div class="block-label">触发源 · 由什么引发(选填)</div>
         <div class="chip-row">
           <button v-for="k in TRIGGER_KINDS" :key="k" class="tag-chip" :class="{ active: triggerKind === k }" @click="triggerKind = triggerKind === k ? '' : k">{{ k }}</button>
         </div>

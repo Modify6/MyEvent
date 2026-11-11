@@ -18,6 +18,7 @@ const showForm = ref(false);
       <van-button size="small" round type="primary" icon="plus" @click="showForm = true">新建</van-button>
     </div>
 
+    <div class="hint-line">对象 = 长期关注的主体(人 / 项目 / 公司 / 主题):想法挂上去,时间线就是认知演化史</div>
     <div v-if="store.active.length" class="card">
       <div v-for="s in store.active" :key="s.id" class="subj-line" @click="router.push(`/subjects/${s.id}`)">
         <div class="row-main">
@@ -44,6 +45,7 @@ const showForm = ref(false);
 </template>
 
 <style scoped>
+.hint-line { font-size: 12px; color: var(--text-3); margin: -2px 2px 8px; }
 .subj-line { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
 .subj-line:last-child { border-bottom: 0; }
 .row-main { flex: 1; min-width: 0; }

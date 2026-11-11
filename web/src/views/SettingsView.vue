@@ -9,7 +9,9 @@ import { getLogs, logsToText, clearLogs, APP_VERSION } from '../lib/logger.js';
 import { db } from '../db/schema.js';
 import { adoptRow } from '../db/repo.js';
 import { api } from '../api/client.js';
+
 import SyncDot from '../components/SyncDot.vue';
+import AppGuide from '../components/AppGuide.vue';
 import VersionHistory from '../components/VersionHistory.vue';
 
 const DATA_TABLES = ['categories', 'events', 'subjects', 'thoughts', 'predictions', 'rules', 'eventEntries'];
@@ -24,6 +26,7 @@ const showLogs = ref(false);
 const showVersionHistory = ref(false);
 const importing = ref(false);
 const lastBackupAt = ref('');
+const showGuide = ref(false);
 
 onMounted(async () => {
   if (auth.hasToken) sync.setup();
@@ -112,6 +115,7 @@ async function backupNow() {
 
     <div class="card">
       <div class="section-title" style="margin-top: 0">多设备同步</div>
+      <div class="muted" style="margin-bottom: 10px">同步是可选的:不连接服务器一切照常用。连接后各端自动合并(按修改时间,不覆盖新数据),云端只是备份副本。</div>
       <template v-if="!auth.hasToken">
         <van-field v-model="serverUrl" label="服务器" placeholder="留空 = 本机服务（同源）" clearable />
         <van-field v-model="password" label="密码" type="password" placeholder="服务端访问密码" />
@@ -148,6 +152,10 @@ async function backupNow() {
     <div class="card">
       <div class="section-title" style="margin-top: 0">关于</div>
       <div class="muted">MyEvent v{{ APP_VERSION }} · 个人认知复盘系统。记录事实与想法的演化,验证预判,沉淀可复用的经验规则。</div>
+      <div class="about-row" @click="showGuide = true">
+        <span>使用指南 · 各功能是什么、怎么用</span>
+        <span class="about-link">查看 ›</span>
+      </div>
       <div class="about-row" @click="showVersionHistory = true">
         <span>版本迭代</span>
         <span class="about-link">v{{ APP_VERSION }} ›</span>
@@ -155,6 +163,7 @@ async function backupNow() {
     </div>
 
     <VersionHistory v-model:show="showVersionHistory" />
+    <AppGuide v-model:show="showGuide" />
 
     <van-popup v-model:show="showLogs" position="bottom" round style="height: 70vh">
       <pre class="logs-pre">{{ logsText }}</pre>
