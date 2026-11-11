@@ -1,6 +1,8 @@
 <script setup>
 // 设置页:多设备同步 / 数据导出导入 / 运行日志 / 关于 + 版本迭代
 import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+const router = useRouter();
 import { showToast } from 'vant';
 import dayjs from 'dayjs';
 import { useAuthStore } from '../stores/auth.js';
@@ -132,6 +134,10 @@ async function backupNow() {
     <div class="card">
       <div class="section-title" style="margin-top: 0">数据 · 导出 / 导入</div>
       <div class="muted" style="margin-bottom: 10px">本地数据完全归你:导出 JSON 随时带走;导入按修改时间合并,不覆盖新数据。</div>
+      <div class="btn-row" style="margin-bottom: 10px">
+        <van-button size="small" plain round icon="delete-o" @click="router.push('/trash')">回收站</van-button>
+        <span class="muted" style="align-self: center">误删的记录在这里恢复</span>
+      </div>
       <div class="btn-row">
         <van-button size="small" plain round type="primary" icon="down" @click="exportData">导出 JSON</van-button>
         <label class="import-label">

@@ -14,6 +14,7 @@ import AttachGuide from '../components/AttachGuide.vue';
 import ConvertToThread from '../components/ConvertToThread.vue';
 import SyncDot from '../components/SyncDot.vue';
 import { THOUGHT_KINDS, TRIGGER_KINDS } from '../lib/domain.js';
+import { getLastAttach, setLastAttach } from '../auth/local.js';
 import { kindMeta, parseTrigger } from '../lib/display.js';
 import { fmtTime } from '../lib/time.js';
 
@@ -27,6 +28,17 @@ const kind = ref('想法');
 const triggerKind = ref('');
 const detail = ref(false);
 const form = reactive({ content: '', triggerNote: '', subjectId: '', eventId: '' });
+
+// 高频手感:一键重挂上次的挂靠组合
+const lastAttach = computed(() => getLastAttach());
+const lastSubjectName = computed(() => lastAttach.value?.subjectId ? subjectStore.nameOf(lastAttach.value.subjectId) : '');
+const lastEventTitle = computed(() => lastAttach.value?.eventId ? eventStore.byId(lastAttach.value.eventId)?.title?.slice(0, 10) : '');
+function reattachLast() {
+  if (!lastAttach.value) return;
+  form.subjectId = lastAttach.value.subjectId || '';
+  form.eventId = lastAttach.value.eventId || '';
+  if (!detail.value) detail.value = true;
+}
 
 async function quickSend() {
   try {
@@ -42,6 +54,7 @@ async function quickSend() {
     });
     form.content = '';
     form.triggerNote = '';
+    if (form.subjectId || form.eventId) setLastAttach({ subjectId: form.subjectId, eventId: form.eventId });
     showSuccessToast('已记录');
     // 连续记录:发送后焦点回到输入框
     nextTick(() => document.querySelector('.quick-input textarea')?.focus());
@@ -212,6 +225,10 @@ function onSheetSelect(a) {
         <van-button type="primary" size="small" round icon="promotion" @click="quickSend">记下</van-button>
       </div>
       <template v-if="detail">
+        <div v-if="lastAttach" class="block-label row-between">
+          <span>上次挂靠</span>
+          <span class="reattach" @click="reattachLast">⟲ 重挂{{ lastSubjectName ? ' @' + lastSubjectName : '' }}{{ lastEventTitle ? ' #' + lastEventTitle : '' }}</span>
+        </div>
         <div class="block-label">类型</div>
         <div class="chip-row">
           <button v-for="k in THOUGHT_KINDS" :key="k" class="tag-chip" :class="{ active: kind === k }" @click="kind = k">{{ k }}</button>
@@ -311,6 +328,7 @@ function onSheetSelect(a) {
 .tag-chip.active { border-color: var(--brand); color: var(--brand); font-weight: 600; background: color-mix(in srgb, var(--brand) 8%, transparent); }
 .add-chip { border-style: dashed; color: var(--text-3); }
 .row-between { display: flex; align-items: center; justify-content: space-between; }
+.reattach { color: var(--brand); cursor: pointer; }
 .guide-link { color: var(--brand); cursor: pointer; font-size: 12px; }
 .feed-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .feed-item:last-child { border-bottom: 0; }

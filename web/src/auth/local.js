@@ -56,6 +56,16 @@ export const isLoggedIn = () => !!getToken();
 export const getLastSyncAt = () => Number(safe.get(K_LASTSYNC)) || 0;
 export const setLastSyncAt = (v) => safe.set(K_LASTSYNC, String(v));
 
+// 上次挂靠组合(高频手感:一键重挂)——JSON { subjectId, eventId }
+export const getLastAttach = () => {
+  try {
+    return JSON.parse(safe.get('myevent.lastAttach') || 'null');
+  } catch {
+    return null;
+  }
+};
+export const setLastAttach = (v) => (v ? safe.set('myevent.lastAttach', JSON.stringify(v)) : safe.del('myevent.lastAttach'));
+
 // 自动每日备份开关（默认开启；显式存 '0' 表示关闭）
 export const getAutoBackup = () => safe.get(K_AUTOBACKUP) !== '0';
 export const setAutoBackup = (v) => (v ? safe.del(K_AUTOBACKUP) : safe.set(K_AUTOBACKUP, '0'));

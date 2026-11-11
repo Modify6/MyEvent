@@ -72,6 +72,13 @@ const nextReviewIn = computed(() => {
   return days > 0 ? `${days} 天后回顾` : '已到回顾时间';
 });
 
+// 观点快照草稿:纯本地拼接最近 8 条记录,供「当前观点」改写(非 AI)
+const viewDraft = computed(() => {
+  const lines = [];
+  for (const t of thoughtStore.ofSubject(sid.value).slice(0, 8)) lines.push(`[${dayjs(t.at).format('M月D日')}] ${t.kind}: ${t.content}`);
+  for (const e of subjectEvents.value.slice(0, 4)) lines.push(`[${dayjs(e.startAt).format('M月D日')}] 线索: ${e.title}`);
+  return lines.length ? lines.join('\n') : '';
+});
 const showEvent = ref(false);
 const showThought = ref(false);
 const showPred = ref(false);
@@ -124,6 +131,7 @@ function goTimeline(it) {
       <template v-else>
         <div class="empty-tip" style="padding: 10px 0">还没有形成当前观点 —— 记下你此刻的判断、置信度和最大反证</div>
         <van-button size="small" round type="primary" plain block @click="showForm = true">填写观点快照</van-button>
+        <van-button v-if="viewDraft" size="small" plain block style="margin-top: 8px" @click="showForm = true">从最近记录生成草稿</van-button>
       </template>
     </div>
 
@@ -197,7 +205,7 @@ function goTimeline(it) {
     <EventComposer v-model:show="showEvent" :subject-id="sid" />
     <NoteComposer v-model:show="showThought" :subject-id="sid" />
     <PredictionComposer v-model:show="showPred" :subject-id="sid" @saved="router.push(`/predictions/${$event.id}`)" @locked="router.push(`/predictions/${$event.id}`)" />
-    <SubjectForm v-model:show="showForm" :subject="subject" />
+    <SubjectForm v-model:show="showForm" :subject="subject" :draft="subject?.currentView ? '' : viewDraft" />
   </div>
   <div v-else class="page"><div class="card"><div class="empty-tip">对象不存在或已删除</div></div></div>
 </template>

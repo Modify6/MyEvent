@@ -9,6 +9,7 @@ import { SUBJECT_TYPES, clampPct } from '../lib/domain.js';
 const props = defineProps({
   show: { type: Boolean, default: false },
   subject: { type: Object, default: null }, // 传入为编辑模式
+  draft: { type: String, default: '' }, // 观点草稿(仅新建视角时预填,用户改写)
 });
 const emit = defineEmits(['update:show', 'saved']);
 
@@ -48,6 +49,7 @@ watch(
     });
     type.value = s?.type || '主题';
     showView.value = !!(s?.currentView);
+    if (!s && props.draft && !form.currentView) form.currentView = props.draft;
   }
 );
 

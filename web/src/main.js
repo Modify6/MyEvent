@@ -32,6 +32,11 @@ window.matchMedia?.('(prefers-color-scheme: dark)')?.addEventListener?.('change'
 
 initLogger();
 
+// 数据安全:请求持久化存储 —— 浏览器不再因磁盘紧张自动回收 IndexedDB(被拒仅记日志,不阻塞)
+navigator.storage?.persist?.().then?.((ok) => {
+  if (!ok) console.warn('[storage] persist 未获批准,数据仍可能被浏览器回收,建议连接云端同步');
+});
+
 const app = createApp(App);
 app.use(createPinia());
 app.use(router);

@@ -270,6 +270,8 @@ body {
 .sync-dot.ok .led {
   background: #34c273;
 }
+.sync-dot.stale .led { background: #f5a623; }
+.sync-dot.stale { color: #f5a623; }
 .sync-dot.error .led {
   background: var(--danger);
 }

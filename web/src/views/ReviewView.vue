@@ -9,7 +9,7 @@ import { usePredictionStore } from '../stores/prediction.js';
 import { useCatalogStore } from '../stores/catalog.js';
 import { calibrationBuckets, PREDICTION_VERIFIED, PREDICTION_KINDS } from '../lib/domain.js';
 import { TRIGGER_ICON } from '../lib/display.js';
-import { weekRange, fmtDate } from '../lib/time.js';
+import { rangeFor, shiftCursor, fmtDate } from '../lib/time.js';
 
 const router = useRouter();
 const eventStore = useEventStore();
@@ -17,16 +17,19 @@ const thoughtStore = useThoughtStore();
 const predictionStore = usePredictionStore();
 const catalog = useCatalogStore();
 
-// 周从周一开始;可左右切换查看最近几周
+// 周/月视图:可左右切换;月视图额外给出与上月的对比
+const period = ref('week');
 const cursor = ref(Date.now());
-const range = computed(() => weekRange(cursor.value));
+const range = computed(() => rangeFor(period.value, cursor.value));
+const prevRange = computed(() => rangeFor(period.value, shiftCursor(period.value, cursor.value, -1)));
 const weekLabel = computed(() => {
+  if (period.value === 'month') return dayjs(cursor.value).format('M月');
   const { start, end } = range.value;
   const sameMonth = dayjs(start).month() === dayjs(end).month();
   return `${dayjs(start).format('M月D日')} ~ ${dayjs(end).format(sameMonth ? 'D日' : 'M月D日')}`;
 });
 function shiftWeek(dir) {
-  cursor.value = dayjs(cursor.value).add(dir * 7, 'day').valueOf();
+  cursor.value = shiftCursor(period.value, cursor.value, dir);
 }
 const inRange = (t) => t >= range.value.start && t < range.value.end;
 
@@ -77,6 +80,17 @@ const triggerStats = computed(() => {
     .map(([k, n]) => ({ k, n, pct: Math.round((n / total) * 100), icon: TRIGGER_ICON[k] || (k === '无触发源' ? '○' : '💭') }));
 });
 
+// 月视图环比:本期 vs 上期记录量(想法 + 过程记录)
+const periodCompare = computed(() => {
+  if (period.value !== 'month') return null;
+  const cnt = (r) =>
+    thoughtStore.active.filter((t) => (t.at || t.createdAt) >= r.start && (t.at || t.createdAt) < r.end).length
+    + eventStore.entries.filter((en) => !en.deleted && en.at >= r.start && en.at < r.end).length;
+  const cur = cnt(range.value);
+  const prev = cnt(prevRange.value);
+  return { cur, prev, diff: cur - prev };
+});
+
 const todos = computed(() => [
   { label: '本周记录', n: weekThoughts.value.length + weekEntries.value.length, to: '/' },
   { label: '活跃线索', n: eventStore.threads.filter((e) => e.updatedAt >= range.value.start || (eventStore.entriesOf(e.id)[0]?.at ?? 0) >= range.value.start).length, to: '/events' },
@@ -94,9 +108,14 @@ const todos = computed(() => [
         <van-icon name="arrow" @click="shiftWeek(1)" />
       </div>
     </div>
+    <div class="seg" style="margin-bottom: 10px">
+      <button :class="{ active: period === 'week' }" @click="period = 'week'">周</button>
+      <button :class="{ active: period === 'month' }" @click="period = 'month'">月</button>
+    </div>
 
     <div class="card">
-      <div class="section-title" style="margin-top: 0">本周概览</div>
+      <div class="section-title" style="margin-top: 0">{{ period === 'month' ? '本月概览' : '本周概览' }}</div>
+      <div v-if="periodCompare" class="muted" style="margin-bottom: 8px">较上月:{{ periodCompare.diff >= 0 ? '+' : '' }}{{ periodCompare.diff }} 条(上月 {{ periodCompare.prev }},本月 {{ periodCompare.cur }})</div>
       <div class="stat-grid">
         <div class="cell"><div class="num">{{ weekEvents.length }}</div><div class="lab">新事件</div></div>
         <div class="cell"><div class="num">{{ weekThoughts.length }}</div><div class="lab">新想法</div></div>
@@ -106,7 +125,7 @@ const todos = computed(() => [
     </div>
 
     <div class="card">
-      <div class="section-title" style="margin-top: 0">本周动态</div>
+      <div class="section-title" style="margin-top: 0">{{ period === 'month' ? '本月动态' : '本周动态' }}</div>
       <div v-for="t in todos" :key="t.label" class="todo-line" @click="router.push(t.to)">
         <span>{{ t.label }}</span>
         <span class="todo-right" :class="{ hot: t.label === '待验证预判' && t.n > 0 }">{{ t.n }} {{ t.label === '待验证预判' ? '条 ›' : '›' }}</span>
@@ -115,7 +134,7 @@ const todos = computed(() => [
     </div>
 
     <div class="card" v-if="triggerStats.length">
-      <div class="section-title" style="margin-top: 0">本周触发源 · 什么最容易引发记录</div>
+      <div class="section-title" style="margin-top: 0">{{ period === 'month' ? '本月触发源' : '本周触发源' }} · 什么最容易引发记录</div>
       <div v-for="t in triggerStats" :key="t.k" class="bar-row">
         <span class="name">{{ t.icon }} {{ t.k }}</span>
         <div class="track"><div class="fill" :style="{ width: t.pct + '%', '--c': 'var(--brand)' }"></div></div>
@@ -124,7 +143,7 @@ const todos = computed(() => [
     </div>
 
     <div class="card" v-if="sceneFreq.length">
-      <div class="section-title" style="margin-top: 0">本周高频场景</div>
+      <div class="section-title" style="margin-top: 0">{{ period === 'month' ? '本月高频场景' : '本周高频场景' }}</div>
       <div v-for="s in sceneFreq" :key="s.name" class="bar-row">
         <span class="name">{{ s.name }}</span>
         <div class="track"><div class="fill" :style="{ width: s.pct + '%', '--c': s.color }"></div></div>
