@@ -270,6 +270,10 @@ body {
 .sync-dot.ok .led {
   background: #34c273;
 }
+/* 一行多概念的分段着色:术语上色,解释保持正文色 */
+.seg-explain { display: flex; flex-wrap: wrap; gap: 3px 16px; align-items: baseline; }
+.seg-explain .se-item b { font-weight: 700; }
+
 /* 说明文字色彩分层:🔵概念(品牌) / ⚪操作(灰,默认) / 🟢安全(绿) / 🟡警示(琥珀,见各处) */
 .hint-line {
   font-size: 12px;

@@ -61,7 +61,12 @@ const concepts = [
         <span>使用指南</span>
         <van-button size="small" plain round @click="emit('update:show', false)">关闭</van-button>
       </div>
-      <div class="motto">记录是砖 → 线索是用砖砌的一段墙 → 对象是整栋楼。<br />散放一块砖也没关系,以后随时砌回去。</div>
+      <div class="motto">
+        <span style="color: #8f9bb3; font-weight: 700">记录</span>是砖 →
+        <span style="color: var(--brand); font-weight: 700">线索</span>是用砖砌的一段墙 →
+        <span style="color: var(--brand-2); font-weight: 700">对象</span>是整栋楼。
+        <br />散放一块砖也没关系,以后随时砌回去。
+      </div>
 
       <div v-for="c in concepts" :key="c.name" class="concept">
         <div class="c-name">{{ c.icon }} {{ c.name }}</div>

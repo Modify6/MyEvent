@@ -186,7 +186,7 @@ async function removeThread() {
       <div class="hint-line hint-brand">记一笔 = 过程中的一个点(新进展/新信息/新想法) · 写小结 = 阶段性回顾,想到哪写到哪,随时可再补</div>
     </div>
 
-    <div class="section-title">过程时间线<span class="tl-legend">记录 = 过程中的一个点 · 小结会高亮 · 「挂记」= 从记录流挂过来的想法</span></div>
+    <div class="section-title">过程时间线<span class="tl-legend"><span style="color: #8f9bb3; font-weight: 600">记录</span> = 过程中的一个点 · <span style="color: var(--brand); font-weight: 600">小结</span> 会高亮 · <span style="color: #f5a623; font-weight: 600">挂记</span> = 从记录流挂过来的想法</span></div>
     <div class="seg" v-if="timeline.length" style="margin-bottom: 10px">
       <button :class="{ active: tlFilter === 'all' }" @click="tlFilter = 'all'">全部</button>
       <button :class="{ active: tlFilter === 'idea' }" @click="tlFilter = 'idea'">只看想法</button>

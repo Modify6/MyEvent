@@ -178,7 +178,11 @@ async function removeSubject() {
       <van-button size="small" plain round type="primary" icon="chat-o" @click="showThought = true">记一笔</van-button>
       <van-button size="small" plain round type="primary" icon="aim" @click="showPred = true">做预判</van-button>
     </div>
-    <div class="hint-line hint-brand">记事件 = 新建一条线索 · 记一笔 = 想法直接挂到这个对象 · 做预判 = 记一个可验证的判断,到期看准不准</div>
+    <div class="hint-line hint-brand seg-explain">
+      <span class="se-item"><b style="color: var(--brand)">记事件</b> 新建一条线索</span>
+      <span class="se-item"><b style="color: #f5a623">记一笔</b> 想法直接挂到这个对象</span>
+      <span class="se-item"><b style="color: var(--brand-2)">做预判</b> 记一个可验证的判断,到期看准不准</span>
+    </div>
 
     <!-- 三轨时间线 -->
     <div class="section-title">时间线 · 事实 / 想法 / 预判</div>

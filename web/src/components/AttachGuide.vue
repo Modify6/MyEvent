@@ -14,7 +14,11 @@ const emit = defineEmits(['update:show']);
         <van-button size="small" plain round @click="emit('update:show', false)">关闭</van-button>
       </div>
 
-      <div class="motto">对象 = <b>关于谁</b>(长期主体) · 线索 = <b>哪件事</b>(有始有终) · 想法 = 念头本身</div>
+      <div class="motto">
+        <span style="color: #34c273; font-weight: 700">对象</span> = <b>关于谁</b>(长期主体) ·
+        <span style="color: var(--brand-2); font-weight: 700">线索</span> = <b>哪件事</b>(有始有终) ·
+        <span style="color: #f5a623; font-weight: 700">想法</span> = 念头本身
+      </div>
 
       <div class="card-mini">
         <div class="row"><span class="who">对象</span><span>长期关注的主体:一个项目 / 一个人 / 一家公司 / 一个主题。没有期限,看它时问「我对它的判断怎么演化的?」</span></div>

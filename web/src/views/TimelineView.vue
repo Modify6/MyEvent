@@ -209,7 +209,11 @@ function onSheetSelect(a) {
     </div>
 
     <!-- 快捷输入:内容即可发送;细节全部可选展开 -->
-    <div class="hint-line">点击记录 = 修改 · 长按 = 编辑/删除;# 线索、@ 对象标签可点跳转</div>
+    <div class="hint-line seg-explain">
+      <span class="se-item"><b>点击</b> 修改</span>
+      <span class="se-item"><b>长按</b> 编辑/删除</span>
+      <span class="se-item"><b>#</b> 线索、<b>@</b> 对象标签可点跳转</span>
+    </div>
     <div class="card quick">
       <van-field
         v-model="form.content"
