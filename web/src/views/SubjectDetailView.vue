@@ -1,19 +1,24 @@
 <script setup>
-// 对象中枢页:顶部当前观点快照 + 中部三线时间线(事实/想法/预判)+ 底部规则与假设
-import { computed, ref } from 'vue';
+// 对象中枢页:当前观点快照 + 三轨时间线 + 未验证假设 + 关联规则 + 预判命中
+// 视觉:彩色首字头像贯穿列表与详情
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import dayjs from 'dayjs';
+import { showConfirmDialog, showSuccessToast } from 'vant';
 import { useSubjectStore } from '../stores/subject.js';
 import { useEventStore } from '../stores/event.js';
 import { useThoughtStore } from '../stores/thought.js';
 import { usePredictionStore } from '../stores/prediction.js';
 import { useRuleStore } from '../stores/rule.js';
+import { useCatalogStore } from '../stores/catalog.js';
 import EventComposer from '../components/EventComposer.vue';
 import NoteComposer from '../components/NoteComposer.vue';
 import PredictionComposer from '../components/PredictionComposer.vue';
+import ThreadEditor from '../components/ThreadEditor.vue';
 import SubjectForm from '../components/SubjectForm.vue';
 import StatusTag from '../components/StatusTag.vue';
 import ConfidenceBar from '../components/ConfidenceBar.vue';
+import { avatarColor } from '../lib/display.js';
 import { fmtDate } from '../lib/time.js';
 import { PREDICTION_VERIFIED } from '../lib/domain.js';
 
@@ -24,13 +29,15 @@ const eventStore = useEventStore();
 const thoughtStore = useThoughtStore();
 const predictionStore = usePredictionStore();
 const ruleStore = useRuleStore();
+const catalog = useCatalogStore();
 
 const sid = computed(() => route.params.id);
 const subject = computed(() => subjectStore.byId(sid.value));
 
 const subjectEvents = computed(() => eventStore.active.filter((e) => (e.subjectIds || []).includes(sid.value)));
 const subjectPredictions = computed(() => predictionStore.ofSubject(sid.value));
-// 三线时间线:事实线 + 想法线 + 预判线,按时间倒序
+
+// 三轨时间线:事实线 + 想法线 + 预判线,倒序;支持过滤与分页
 const timeline = computed(() => {
   const items = [];
   for (const e of subjectEvents.value) items.push({ kind: 'event', at: e.startAt, data: e });
@@ -38,6 +45,19 @@ const timeline = computed(() => {
   for (const p of subjectPredictions.value) items.push({ kind: 'prediction', at: p.madeAt, data: p });
   return items.sort((a, b) => b.at - a.at);
 });
+const tlFilter = ref('all');
+const timelineFiltered = computed(() => {
+  if (tlFilter.value === 'idea') return timeline.value.filter((it) => it.kind === 'thought');
+  if (tlFilter.value === 'prediction') return timeline.value.filter((it) => it.kind === 'prediction');
+  if (tlFilter.value === 'event') return timeline.value.filter((it) => it.kind === 'event');
+  return timeline.value;
+});
+const PAGE_SIZE = 50;
+const limit = ref(PAGE_SIZE);
+const tlShown = computed(() => timelineFiltered.value.slice(0, limit.value));
+const hasMore = computed(() => timelineFiltered.value.length > limit.value);
+const loadMore = () => { limit.value += PAGE_SIZE; };
+watch(tlFilter, () => { limit.value = PAGE_SIZE; });
 
 const hypotheses = computed(() => thoughtStore.ofSubject(sid.value).filter((t) => t.kind === '假设'));
 const relatedRules = computed(() =>
@@ -46,14 +66,13 @@ const relatedRules = computed(() =>
     subjectPredictions.value.map((p) => p.id)
   )
 );
-// 预判命中率:hit + 0.5×partial / 有结果数
 const hitStat = computed(() => {
   const done = subjectPredictions.value.filter((p) => PREDICTION_VERIFIED.includes(p.status));
   const score = done.reduce((s, p) => s + (p.status === 'hit' ? 1 : p.status === 'partial' ? 0.5 : 0), 0);
   return { total: subjectPredictions.value.length, done: done.length, rate: done.length ? Math.round((score / done.length) * 100) : null };
 });
 
-// 观点快照温和提醒:超 30 天未更新且期间有新记录时提示(纯被动,不做任何催促)
+// 观点快照温和提醒:超 30 天未更新且期间有新记录(纯被动)
 const snapshotHint = computed(() => {
   const sub = subject.value;
   if (!sub?.currentView) return '';
@@ -72,17 +91,18 @@ const nextReviewIn = computed(() => {
   return days > 0 ? `${days} 天后回顾` : '已到回顾时间';
 });
 
-// 观点快照草稿:纯本地拼接最近 8 条记录,供「当前观点」改写(非 AI)
+// 观点快照草稿:纯本地拼接最近 8 条记录(非 AI)
 const viewDraft = computed(() => {
   const lines = [];
   for (const t of thoughtStore.ofSubject(sid.value).slice(0, 8)) lines.push(`[${dayjs(t.at).format('M月D日')}] ${t.kind}: ${t.content}`);
   for (const e of subjectEvents.value.slice(0, 4)) lines.push(`[${dayjs(e.startAt).format('M月D日')}] 线索: ${e.title}`);
   return lines.length ? lines.join('\n') : '';
 });
-const showEvent = ref(false);
-const showThought = ref(false);
-const showPred = ref(false);
-const showForm = ref(false);
+
+const avatarStyle = computed(() => {
+  const c = avatarColor(subject.value.id);
+  return { background: `color-mix(in srgb, ${c} 16%, transparent)`, color: c };
+});
 
 // 时间线行跳转:预判→详情;事件→线索页;想法→其挂靠的线索(若有)
 function goTimeline(it) {
@@ -90,15 +110,33 @@ function goTimeline(it) {
   if (it.kind === 'event') return router.push(`/events/${it.data.id}`);
   if (it.kind === 'thought' && it.data.relatedEventId) return router.push(`/events/${it.data.relatedEventId}`);
 }
+
+const showEvent = ref(false);
+const showThought = ref(false);
+const showPred = ref(false);
+const showForm = ref(false);
+const showThreadEditor = ref(false);
+
+async function removeSubject() {
+  try {
+    await showConfirmDialog({ title: '删除对象?', message: `「${subject.value.name}」及其挂靠关系将移入回收状态(软删,可在回收站恢复)。`, confirmButtonText: '删除' });
+    await subjectStore.remove(sid.value);
+    router.replace('/subjects');
+  } catch {}
+}
 </script>
 
 <template>
   <div class="page" v-if="subject">
     <div class="page-head">
       <h1 class="head-name">
-        <van-icon name="arrow-left" size="20" @click="router.back()" />{{ subject.name }}
+        <van-icon name="arrow-left" size="20" @click="router.back()" />
+        <span class="header-avatar" :style="avatarStyle">{{ subject.name.slice(0, 1) }}</span>{{ subject.name }}
       </h1>
-      <van-button size="small" plain round @click="showForm = true">编辑</van-button>
+      <span class="head-actions">
+        <van-button size="small" plain round @click="showThreadEditor = true">编辑</van-button>
+        <van-icon name="delete-o" size="20" color="var(--text-3)" @click="removeSubject" />
+      </span>
     </div>
 
     <!-- 当前观点快照 -->
@@ -107,7 +145,6 @@ function goTimeline(it) {
         <span class="card-title">当前观点</span>
         <van-tag plain round size="medium">{{ subject.type }}</van-tag>
       </div>
-      <div class="hint-line">写下此刻对它的核心判断与置信度 —— 日后回看,判断是怎么变的</div>
       <template v-if="subject.currentView">
         <div class="view-text">{{ subject.currentView }}</div>
         <ConfidenceBar :value="subject.currentConfidence" size="lg" style="margin-top: 10px" />
@@ -143,28 +180,35 @@ function goTimeline(it) {
     </div>
     <div class="hint-line hint-brand">记事件 = 新建一条线索 · 记一笔 = 想法直接挂到这个对象 · 做预判 = 记一个可验证的判断,到期看准不准</div>
 
-    <!-- 三线时间线 -->
+    <!-- 三轨时间线 -->
     <div class="section-title">时间线 · 事实 / 想法 / 预判</div>
-    <div class="card">
-      <template v-if="timeline.length">
-        <div v-for="it in timeline.slice(0, 30)" :key="it.kind + it.data.id" class="tl-line" @click="goTimeline(it)">
-          <span class="tl-kind" :class="it.kind">{{ it.kind === 'event' ? '事' : it.kind === 'thought' ? '想' : '判' }}</span>
-          <div class="row-main">
-            <div class="tl-text">{{ it.kind === 'event' ? it.data.title : it.data.content }}</div>
-            <div class="muted">
-              {{ fmtDate(it.at) }}
-              <template v-if="it.kind === 'event'">· {{ it.data.status === 'reviewed' ? '已复盘' : '待复盘' }}</template>
-              <template v-if="it.kind === 'thought'">· {{ it.data.kind }}<template v-if="it.data.confidence != null"> · {{ it.data.confidence }}%</template></template>
-              <template v-if="it.kind === 'prediction'">· {{ it.data.origConfidence }}%</template>
-            </div>
-          </div>
-          <StatusTag v-if="it.kind !== 'thought'" :kind="it.kind" :status="it.data.status" :prediction="it.kind === 'prediction' ? it.data : null" />
-        </div>
-      </template>
-      <div v-else class="empty-tip">这个对象还没有记录 —— 用上面的按钮记第一笔</div>
+    <div class="seg" v-if="timeline.length" style="margin-bottom: 10px">
+      <button :class="{ active: tlFilter === 'all' }" @click="tlFilter = 'all'">全部</button>
+      <button :class="{ active: tlFilter === 'event' }" @click="tlFilter = 'event'">事实</button>
+      <button :class="{ active: tlFilter === 'thought' }" @click="tlFilter = 'thought'">想法</button>
+      <button :class="{ active: tlFilter === 'prediction' }" @click="tlFilter = 'prediction'">预判</button>
     </div>
+    <div class="card" v-if="tlShown.length">
+      <div v-for="it in tlShown.slice(0, 30)" :key="it.kind + it.data.id" class="tl-line" @click="goTimeline(it)">
+        <span class="tl-kind" :class="it.kind">{{ it.kind === 'event' ? '事' : it.kind === 'thought' ? '想' : '判' }}</span>
+        <div class="row-main">
+          <div class="tl-text">{{ it.kind === 'event' ? it.data.title : it.data.content }}</div>
+          <div class="muted">
+            {{ fmtDate(it.at) }}
+            <template v-if="it.kind === 'event'">· {{ it.data.status === 'reviewed' ? '已复盘' : '待复盘' }}</template>
+            <template v-if="it.kind === 'thought'">· {{ it.data.kind }}<template v-if="it.data.confidence != null"> · {{ it.data.confidence }}%</template></template>
+            <template v-if="it.kind === 'prediction'">· {{ it.data.origConfidence }}%</template>
+          </div>
+        </div>
+        <StatusTag v-if="it.kind !== 'thought'" :kind="it.kind" :status="it.data.status" :prediction="it.kind === 'prediction' ? it.data : null" />
+      </div>
+    </div>
+    <div v-if="hasMore" class="row-center" style="margin: 4px 0 8px">
+      <van-button plain round size="small" @click="loadMore">还有 {{ timelineFiltered.length - limit }} 条 · 加载更多</van-button>
+    </div>
+    <div v-else-if="!timeline.length" class="card"><div class="empty-tip">这个对象还没有记录 —— 用上面的按钮记第一笔</div></div>
 
-    <!-- 底部:命中 / 假设 / 规则 -->
+    <!-- 预判命中 -->
     <div class="card">
       <div class="row-between">
         <span class="card-title">预判命中</span>
@@ -177,10 +221,11 @@ function goTimeline(it) {
       <div v-else class="muted">暂无已验证预判</div>
     </div>
 
+    <!-- 未验证假设 -->
     <template v-if="hypotheses.length">
       <div class="section-title">未验证假设</div>
       <div class="card">
-        <div v-for="h in hypotheses" :key="h.id" class="row-line" @click="openTimelineThought(h)">
+        <div v-for="h in hypotheses" :key="h.id" class="row-line" @click="goTimeline({ kind: 'thought', data: h })">
           <div class="row-main">
             <div class="tl-text">{{ h.content }}</div>
             <div class="muted">{{ fmtDate(h.at) }}<template v-if="h.confidence != null"> · {{ h.confidence }}%</template></div>
@@ -189,6 +234,7 @@ function goTimeline(it) {
       </div>
     </template>
 
+    <!-- 关联经验规则 -->
     <template v-if="relatedRules.length">
       <div class="section-title">关联经验规则</div>
       <div class="card">
@@ -206,6 +252,7 @@ function goTimeline(it) {
     <NoteComposer v-model:show="showThought" :subject-id="sid" />
     <PredictionComposer v-model:show="showPred" :subject-id="sid" @saved="router.push(`/predictions/${$event.id}`)" @locked="router.push(`/predictions/${$event.id}`)" />
     <SubjectForm v-model:show="showForm" :subject="subject" :draft="subject?.currentView ? '' : viewDraft" />
+    <ThreadEditor v-model:show="showThreadEditor" :thread="subject" />
   </div>
   <div v-else class="page"><div class="card"><div class="empty-tip">对象不存在或已删除</div></div></div>
 </template>
@@ -213,13 +260,15 @@ function goTimeline(it) {
 <style scoped>
 .head-name { display: flex; align-items: center; gap: 10px; }
 .head-name .van-icon { color: var(--text-2); cursor: pointer; }
+.header-avatar { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; }
+.head-actions { display: flex; align-items: center; gap: 12px; margin-left: auto; }
 .card-title { font-size: 14px; font-weight: 700; }
 .row-between { display: flex; align-items: center; justify-content: space-between; }
 .view-text { font-size: 15px; line-height: 1.6; margin-top: 8px; }
 .block-label { font-size: 12px; color: var(--text-3); margin: 10px 2px 4px; }
 .reason-list { margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-2); line-height: 1.8; }
-.quick-row { display: flex; gap: 10px; }
 .snap-hint { font-size: 12px; color: #f5a623; margin-top: 8px; line-height: 1.6; }
+.quick-row { display: flex; gap: 10px; }
 .quick-row .van-button { flex: 1; }
 .tl-line { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
 .tl-line:last-child { border-bottom: 0; }
@@ -234,4 +283,5 @@ function goTimeline(it) {
 .row-line:last-child { border-bottom: 0; }
 .big-stat { font-size: 32px; font-weight: 800; color: var(--brand); margin-top: 6px; font-variant-numeric: tabular-nums; }
 .big-stat small { font-size: 16px; }
+.row-center { display: flex; justify-content: center; }
 </style>

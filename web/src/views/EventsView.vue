@@ -7,6 +7,7 @@ import { useEventStore } from '../stores/event.js';
 import { useCatalogStore } from '../stores/catalog.js';
 import EventComposer from '../components/EventComposer.vue';
 import { fmtDate } from '../lib/time.js';
+import { avatarColor } from '../lib/display.js';
 
 const router = useRouter();
 const store = useEventStore();
@@ -61,6 +62,7 @@ const emptyText = {
 
     <div v-if="filtered.length" class="card">
       <div v-for="e in filtered" :key="e.id" class="ev-item" @click="router.push(`/events/${e.id}`)">
+        <div class="avatar" :style="{ background: `color-mix(in srgb, ${avatarColor(e.id)} 16%, transparent)`, color: avatarColor(e.id) }">{{ e.title.slice(0, 1) }}</div>
         <div class="ev-main">
           <div class="ev-title">
             {{ e.title }}
@@ -94,4 +96,5 @@ const emptyText = {
 .ev-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ev-note { font-size: 12px; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ev-side { display: flex; align-items: center; gap: 10px; }
+.avatar { flex: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; }
 </style>

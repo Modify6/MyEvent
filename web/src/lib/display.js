@@ -34,3 +34,24 @@ export function parseTrigger(source) {
   if (m) return { icon: TRIGGER_ICON[m[1]] || '✳️', text: s };
   return { icon: '💭', text: s };
 }
+
+// —— 对象/线索列表的视觉锚点 ——
+// 对象类型 → 专属色(标签用)
+export const SUBJECT_TYPE_COLOR = {
+  人: '#34c273',
+  项目: '#4f6ef7',
+  公司: '#f5a623',
+  投资标的: '#7c4dff',
+  关系: '#ff9d5c',
+  主题: '#00b8d4',
+  决策: '#ee5a5a',
+};
+export const typeColor = (t) => SUBJECT_TYPE_COLOR[t] || '#98a2b3';
+
+// 头像色:按 id 稳定散列到调色板(同一对象永远同色)
+const AVATAR_PALETTE = ['#4f6ef7', '#7c4dff', '#34c273', '#f5a623', '#00b8d4', '#ee5a5a', '#ff9d5c', '#1e88e5'];
+export function avatarColor(id) {
+  let h = 0;
+  for (const c of String(id || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return AVATAR_PALETTE[h % AVATAR_PALETTE.length];
+}
