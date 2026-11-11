@@ -50,7 +50,7 @@ const emptyText = {
       <van-button size="small" round type="primary" icon="plus" @click="showNew = true">新线索</van-button>
     </div>
 
-    <div class="hint-line">线索 = 一件持续跟进的事;完结/搁置只是标记,过程记录全保留</div>
+    <div class="hint-line hint-brand">🧵 线索 = 一件持续跟进的事;完结/搁置只是标记,过程记录全保留</div>
 
     <div class="seg" style="margin-bottom: 12px">
       <button :class="{ active: stateFilter === 'open' }" @click="stateFilter = 'open'">进行中 {{ counts.open }}</button>
@@ -88,7 +88,6 @@ const emptyText = {
 </template>
 
 <style scoped>
-.hint-line { font-size: 12px; color: var(--text-3); margin: -2px 2px 8px; }
 .ev-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
 .ev-item:last-child { border-bottom: 0; }
 .ev-main { flex: 1; min-width: 0; }

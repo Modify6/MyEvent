@@ -141,7 +141,7 @@ function goTimeline(it) {
       <van-button size="small" plain round type="primary" icon="chat-o" @click="showThought = true">记一笔</van-button>
       <van-button size="small" plain round type="primary" icon="aim" @click="showPred = true">做预判</van-button>
     </div>
-    <div class="hint-line">记事件 = 新建一条线索 · 记一笔 = 想法直接挂到这个对象 · 做预判 = 记一个可验证的判断,到期看准不准</div>
+    <div class="hint-line hint-brand">记事件 = 新建一条线索 · 记一笔 = 想法直接挂到这个对象 · 做预判 = 记一个可验证的判断,到期看准不准</div>
 
     <!-- 三线时间线 -->
     <div class="section-title">时间线 · 事实 / 想法 / 预判</div>
@@ -219,7 +219,6 @@ function goTimeline(it) {
 .block-label { font-size: 12px; color: var(--text-3); margin: 10px 2px 4px; }
 .reason-list { margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-2); line-height: 1.8; }
 .quick-row { display: flex; gap: 10px; }
-.hint-line { font-size: 12px; color: var(--text-3); margin: -6px 2px 8px; line-height: 1.6; }
 .snap-hint { font-size: 12px; color: #f5a623; margin-top: 8px; line-height: 1.6; }
 .quick-row .van-button { flex: 1; }
 .tl-line { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); cursor: pointer; }

@@ -183,7 +183,7 @@ async function removeThread() {
         <van-button v-else plain size="small" round type="primary" @click="setThreadState('open')">重新打开</van-button>
         <span class="muted" style="font-size: 11px; align-self: center">完结/搁置只是标记,随时可改,过程全保留</span>
       </div>
-      <div class="hint-line">记一笔 = 过程中的一个点(新进展/新信息/新想法) · 写小结 = 阶段性回顾,想到哪写到哪,随时可再补</div>
+      <div class="hint-line hint-brand">记一笔 = 过程中的一个点(新进展/新信息/新想法) · 写小结 = 阶段性回顾,想到哪写到哪,随时可再补</div>
     </div>
 
     <div class="section-title">过程时间线<span class="tl-legend">记录 = 过程中的一个点 · 小结会高亮 · 「挂记」= 从记录流挂过来的想法</span></div>
@@ -248,7 +248,6 @@ async function removeThread() {
 .chips-row .chip { cursor: pointer; }
 .fact { font-size: 13px; color: var(--text-2); margin-top: 8px; line-height: 1.6; }
 .btn-row { display: flex; gap: 10px; margin-top: 12px; }
-.hint-line { font-size: 12px; color: var(--text-3); margin-top: 8px; line-height: 1.6; }
 .tl-legend { font-size: 11px; color: var(--text-3); font-weight: 400; margin-left: 8px; }
 .tl-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); align-items: flex-start; }
 .tl-item:last-child { border-bottom: 0; }

@@ -270,6 +270,28 @@ body {
 .sync-dot.ok .led {
   background: #34c273;
 }
+/* 说明文字色彩分层:🔵概念(品牌) / ⚪操作(灰,默认) / 🟢安全(绿) / 🟡警示(琥珀,见各处) */
+.hint-line {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-3);
+  margin: -2px 2px 8px;
+}
+.hint-line.hint-brand {
+  color: color-mix(in srgb, var(--brand) 80%, var(--text));
+  background: color-mix(in srgb, var(--brand) 6%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--brand) 40%, transparent);
+  padding: 5px 9px;
+  border-radius: 6px;
+}
+.hint-line.hint-safe {
+  color: #2f9e6e;
+  background: color-mix(in srgb, #34c273 8%, transparent);
+  border-left: 2px solid color-mix(in srgb, #34c273 40%, transparent);
+  padding: 5px 9px;
+  border-radius: 6px;
+}
+
 .sync-dot.stale .led { background: #f5a623; }
 .sync-dot.stale { color: #f5a623; }
 .sync-dot.error .led {

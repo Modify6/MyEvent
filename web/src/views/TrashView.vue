@@ -54,7 +54,7 @@ const typeColor = (t) => kindMeta(t)?.color || '#8f9bb3';
       </h1>
     </div>
 
-    <div class="hint-line">已删除的记录保留在本地与云端以防误删,可随时恢复;不提供彻底销毁(同步一致性与数据安全优先)。</div>
+    <div class="hint-line hint-safe">🛡 已删除的记录保留在本地与云端以防误删,可随时恢复;不提供彻底销毁(同步一致性与数据安全优先)。</div>
 
     <div v-if="items.length" class="card">
       <div v-for="it in items" :key="it.key" class="trash-item">
@@ -73,7 +73,6 @@ const typeColor = (t) => kindMeta(t)?.color || '#8f9bb3';
 <style scoped>
 .head-name { display: flex; align-items: center; gap: 10px; }
 .head-name .van-icon { color: var(--text-2); cursor: pointer; }
-.hint-line { font-size: 12px; color: var(--text-3); margin: -2px 2px 8px; line-height: 1.6; }
 .trash-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .trash-item:last-child { border-bottom: 0; }
 .t-kind { flex: none; font-size: 11px; border: 1px solid; border-radius: 4px; padding: 1px 6px; margin-top: 2px; white-space: nowrap; font-weight: 600; }
