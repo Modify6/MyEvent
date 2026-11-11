@@ -34,6 +34,20 @@ const sections = computed(() => {
       items: lim(eventStore.active.filter((e) => hit(e.title) || hit(e.fact)).map((e) => ({ id: e.id, text: e.title, sub: '线索', to: `/events/${e.id}` }))),
     },
     {
+      key: 'entries',
+      label: '过程记录',
+      items: lim(
+        eventStore.entries
+          .filter((en) => !en.deleted && (hit(en.content) || hit(en.triggerNote)))
+          .map((en) => ({
+            id: en.id,
+            text: en.content,
+            sub: en.kind === 'summary' ? '小结' : '过程记录',
+            to: `/events/${en.eventId}`,
+          }))
+      ),
+    },
+    {
       key: 'thoughts',
       label: '想法',
       items: lim(
@@ -68,7 +82,7 @@ const sections = computed(() => {
       <h1 class="head-name"><van-icon name="arrow-left" size="20" @click="router.back()" />搜索</h1>
     </div>
 
-    <van-search v-model="q" placeholder="搜对象 / 事件 / 想法 / 预判 / 规则" shape="round" background="transparent" />
+    <van-search v-model="q" placeholder="搜对象 / 事件 / 想法 / 过程记录 / 预判 / 规则" shape="round" background="transparent" />
     <div class="hint-line">点击结果直达所属页面:想法 → 所在线索/对象,事件 → 线索详情</div>
 
     <template v-for="s in sections" :key="s.key">
@@ -84,7 +98,7 @@ const sections = computed(() => {
       </div>
     </template>
     <div v-if="q.trim() && !sections.length" class="card"><div class="empty-tip">没有匹配「{{ q }}」的记录</div></div>
-    <div v-if="!q.trim()" class="card"><div class="empty-tip">输入关键词,横跨五类记录查找</div></div>
+    <div v-if="!q.trim()" class="card"><div class="empty-tip">输入关键词,横跨六类内容查找</div></div>
   </div>
 </template>
 
