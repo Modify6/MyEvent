@@ -443,3 +443,7 @@ body {
 .van-tabbar {
   padding-bottom: var(--safe-bottom);
 }
+
+/* 轻量动效:列表项渐入(分页追加同样生效)、统计大数弹入 */
+.feed-item, .subj-line, .ev-item, .tl-line, .tl-item, .trash-item, .s-line, .row-line { animation: fadeUp 0.18s ease both; }
+.big-stat { animation: popIn 0.25s ease both; }

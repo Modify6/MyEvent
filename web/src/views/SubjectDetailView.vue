@@ -72,6 +72,22 @@ const hitStat = computed(() => {
   return { total: subjectPredictions.value.length, done: done.length, rate: done.length ? Math.round((score / done.length) * 100) : null };
 });
 
+// 近 8 周迷你密度图:该对象的记录节奏(想法 + 线索活动)
+const density = computed(() => {
+  const out = [];
+  const now = Date.now();
+  for (let i = 7; i >= 0; i--) {
+    const end = now - i * 7 * 86_400_000;
+    const start = end - 7 * 86_400_000;
+    const n = thoughtStore.ofSubject(sid.value).filter((t) => t.at >= start && t.at < end).length
+      + subjectEvents.value.filter((e) => e.startAt >= start && e.startAt < end).length;
+    out.push({ n });
+  }
+  return out;
+});
+const densityMax = computed(() => Math.max(1, ...density.value.map((d) => d.n)));
+const densityTotal = computed(() => density.value.reduce((a, b) => a + b.n, 0));
+
 // 观点快照温和提醒:超 30 天未更新且期间有新记录(纯被动)
 const snapshotHint = computed(() => {
   const sub = subject.value;
@@ -145,6 +161,13 @@ async function removeSubject() {
         <span class="card-title">当前观点</span>
         <van-tag plain round size="medium">{{ subject.type }}</van-tag>
       </div>
+      <div class="density" v-if="densityTotal">
+        <span class="muted" style="flex: none">近 8 周</span>
+        <div class="d-bars">
+          <div v-for="(d, i) in density" :key="i" class="d-bar" :style="{ height: Math.max(4, Math.round((d.n / densityMax) * 30)) + 'px', opacity: d.n ? 1 : 0.35 }"></div>
+        </div>
+        <span class="muted" style="font-size: 11px">共 {{ densityTotal }} 条</span>
+      </div>
       <template v-if="subject.currentView">
         <div class="view-text">{{ subject.currentView }}</div>
         <ConfidenceBar :value="subject.currentConfidence" size="lg" style="margin-top: 10px" />
@@ -192,7 +215,7 @@ async function removeSubject() {
       <button :class="{ active: tlFilter === 'thought' }" @click="tlFilter = 'thought'">想法</button>
       <button :class="{ active: tlFilter === 'prediction' }" @click="tlFilter = 'prediction'">预判</button>
     </div>
-    <div class="card" v-if="tlShown.length">
+    <div class="card rail" v-if="tlShown.length">
       <div v-for="it in tlShown.slice(0, 30)" :key="it.kind + it.data.id" class="tl-line" @click="goTimeline(it)">
         <span class="tl-kind" :class="it.kind">{{ it.kind === 'event' ? '事' : it.kind === 'thought' ? '想' : '判' }}</span>
         <div class="row-main">
@@ -272,10 +295,15 @@ async function removeSubject() {
 .block-label { font-size: 12px; color: var(--text-3); margin: 10px 2px 4px; }
 .reason-list { margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-2); line-height: 1.8; }
 .snap-hint { font-size: 12px; color: #f5a623; margin-top: 8px; line-height: 1.6; }
+.density { display: flex; align-items: flex-end; gap: 10px; margin-top: 12px; }
+.d-bars { display: flex; align-items: flex-end; gap: 4px; }
+.d-bar { width: 11px; border-radius: 3px 3px 1px 1px; background: color-mix(in srgb, var(--brand) 55%, transparent); }
 .quick-row { display: flex; gap: 10px; }
 .quick-row .van-button { flex: 1; }
 .tl-line { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
 .tl-line:last-child { border-bottom: 0; }
+.card.rail { position: relative; }
+.card.rail::before { content: ''; position: absolute; left: 24px; top: 16px; bottom: 16px; width: 2px; border-radius: 1px; background: var(--line); }
 .tl-kind { flex: none; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; }
 .tl-kind.event { background: var(--brand); }
 .tl-kind.thought { background: #f5a623; }

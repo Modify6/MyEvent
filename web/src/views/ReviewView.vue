@@ -9,7 +9,7 @@ import { usePredictionStore } from '../stores/prediction.js';
 import { useCatalogStore } from '../stores/catalog.js';
 import { calibrationBuckets, PREDICTION_VERIFIED, PREDICTION_KINDS } from '../lib/domain.js';
 import { TRIGGER_ICON } from '../lib/display.js';
-import { rangeFor, shiftCursor, fmtDate } from '../lib/time.js';
+import { rangeFor, shiftCursor, weekRange, fmtDate } from '../lib/time.js';
 
 const router = useRouter();
 const eventStore = useEventStore();
@@ -91,6 +91,25 @@ const periodCompare = computed(() => {
   return { cur, prev, diff: cur - prev };
 });
 
+// 近 12 周记录密度热力格(想法 + 过程记录;点某周跳转该周明细)
+const heatWeeks = computed(() => {
+  const thisWeek = weekRange(Date.now());
+  const out = [];
+  for (let i = 11; i >= 0; i--) {
+    const start = thisWeek.start - i * 7 * 86_400_000;
+    const end = start + 7 * 86_400_000;
+    const n = thoughtStore.active.filter((t) => (t.at || t.createdAt) >= start && (t.at || t.createdAt) < end).length
+      + eventStore.entries.filter((en) => !en.deleted && en.at >= start && en.at < end).length;
+    out.push({ start, n, label: dayjs(start).format('M/D') + ' 周 · ' + n + ' 条' });
+  }
+  return out;
+});
+const heatLevel = (n) => (n === 0 ? 0 : n <= 2 ? 1 : n <= 4 ? 2 : n <= 7 ? 3 : 4);
+function pickWeek(w) {
+  cursor.value = w.start;
+  period.value = 'week';
+}
+
 const todos = computed(() => [
   { label: '本周记录', n: weekThoughts.value.length + weekEntries.value.length, to: '/' },
   { label: '活跃线索', n: eventStore.threads.filter((e) => e.updatedAt >= range.value.start || (eventStore.entriesOf(e.id)[0]?.at ?? 0) >= range.value.start).length, to: '/events' },
@@ -111,6 +130,15 @@ const todos = computed(() => [
     <div class="seg" style="margin-bottom: 10px">
       <button :class="{ active: period === 'week' }" @click="period = 'week'">周</button>
       <button :class="{ active: period === 'month' }" @click="period = 'month'">月</button>
+    </div>
+
+    <div class="card" v-if="heatWeeks.some((w) => w.n > 0)">
+      <div class="section-title" style="margin-top: 0">近 12 周记录密度<span class="muted" style="font-weight: 400"> · 点某周跳转明细</span></div>
+      <div class="heat-row">
+        <div v-for="w in heatWeeks" :key="w.start" class="heat-cell" :class="'lv' + heatLevel(w.n)" :title="w.label" @click="pickWeek(w)">
+          <span v-if="w.n" class="heat-n">{{ w.n }}</span>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -179,6 +207,14 @@ const todos = computed(() => [
 </template>
 
 <style scoped>
+.heat-row { display: flex; gap: 5px; }
+.heat-cell { flex: 1; aspect-ratio: 1; border-radius: 6px; background: var(--track); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.heat-cell.lv1 { background: color-mix(in srgb, var(--brand) 18%, var(--card)); }
+.heat-cell.lv2 { background: color-mix(in srgb, var(--brand) 38%, var(--card)); }
+.heat-cell.lv3 { background: color-mix(in srgb, var(--brand) 62%, var(--card)); }
+.heat-cell.lv4 { background: color-mix(in srgb, var(--brand) 88%, var(--card)); }
+.heat-n { font-size: 10px; font-weight: 600; color: var(--text-2); }
+.heat-cell.lv3 .heat-n, .heat-cell.lv4 .heat-n { color: #fff; }
 .week-nav { display: flex; align-items: center; gap: 12px; color: var(--text-2); font-size: 13px; cursor: pointer; }
 .week-label { min-width: 110px; text-align: center; }
 .todo-line { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 14px; cursor: pointer; }

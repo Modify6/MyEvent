@@ -192,7 +192,7 @@ async function removeThread() {
       <button :class="{ active: tlFilter === 'idea' }" @click="tlFilter = 'idea'">只看想法</button>
       <button :class="{ active: tlFilter === 'summary' }" @click="tlFilter = 'summary'">只看小结</button>
     </div>
-    <div class="card" v-if="tlShown.length">
+    <div class="card rail" v-if="tlShown.length">
       <div v-for="it in tlShown" :key="it.key">
         <div
           class="tl-item"
@@ -203,11 +203,11 @@ async function removeThread() {
           @touchend="cancelPress"
           @contextmenu.prevent
         >
-          <div class="tl-kind" :style="kindStyle(it.kind)">{{ kindIcon(it.kind) }} {{ it.kind }}</div>
+          <div class="tl-kind" :style="kindStyle(it.kind)">{{ kindIcon(it.kind) }}</div>
           <div class="row-main">
             <div class="tl-text">{{ it.content }}</div>
             <div class="muted">
-              {{ fmtDate(it.at) }} {{ fmtTime(it.at) }}
+              {{ it.kind }} · {{ fmtDate(it.at) }} {{ fmtTime(it.at) }}
               <template v-if="it.edited"> · ✎ 已编辑</template>
               <template v-if="trig(it.trigger)"> · <span class="trig">{{ trig(it.trigger).icon }} {{ trig(it.trigger).text }}</span></template>
             </div>
@@ -251,8 +251,10 @@ async function removeThread() {
 .tl-legend { font-size: 11px; color: var(--text-3); font-weight: 400; margin-left: 8px; }
 .tl-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); align-items: flex-start; }
 .tl-item:last-child { border-bottom: 0; }
+.card.rail { position: relative; }
+.card.rail::before { content: ''; position: absolute; left: 26px; top: 16px; bottom: 16px; width: 2px; border-radius: 1px; background: var(--line); }
 .tl-item.summary { background: color-mix(in srgb, var(--brand) 5%, transparent); border-left: 3px solid var(--brand); border-radius: 8px; padding: 10px 8px; margin: 4px 0; border-bottom: 0; }
-.tl-kind { flex: none; font-size: 11px; border: 1px solid; border-radius: 4px; padding: 1px 6px; margin-top: 2px; white-space: nowrap; font-weight: 600; }
+.tl-kind { flex: none; width: 26px; height: 26px; border: 1px solid transparent; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; margin-top: 1px; }
 .trig { color: var(--text-2); }
 .row-main { flex: 1; min-width: 0; }
 .tl-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
