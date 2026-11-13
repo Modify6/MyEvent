@@ -102,6 +102,10 @@ deploy/       VPS 一键部署脚本与指南
 web/tests/    Vitest 单测   ·   web/e2e/   Playwright e2e
 ```
 
+## 产品文档
+
+- [产品需求文档(PRD)](docs/PRD.md) —— 权威产品基准:定位/原则/功能验收标准/视觉规范/路线图
+
 ## 需求与版本演进
 
 每个版本都从真实使用反馈出发。**各需求的原话要点、提出日期与落实情况见 [需求台账](docs/REQUIREMENTS.md)**,工程变更细节见 [CHANGELOG](CHANGELOG.md)。
