@@ -7,6 +7,7 @@ import { useEventStore } from '../stores/event.js';
 import { useSubjectStore } from '../stores/subject.js';
 import { useCatalogStore } from '../stores/catalog.js';
 import EventComposer from '../components/EventComposer.vue';
+import FolderDrawer from '../components/FolderDrawer.vue';
 import { fmtDate } from '../lib/time.js';
 import { avatarColor } from '../lib/display.js';
 
@@ -30,25 +31,39 @@ const counts = computed(() => {
   return c;
 });
 
-// 归纳分类:场景 / 挂靠对象 下拉 + 页内关键词(标题/事实)
-const fScene = ref('');
+// 归纳分类:按场景分文件夹抽屉(未归类垫底)+ 挂靠对象下拉 + 页内关键词
 const fSubject = ref('');
 const q = ref('');
-const sceneOptions = computed(() => [
-  { text: '全部场景', value: '' },
-  ...catalog.active.map((c) => ({ text: c.name, value: c.id })),
-]);
 const subjectOptions = computed(() => [
   { text: '全部对象', value: '' },
   ...subjectStore.active.map((s) => ({ text: s.name, value: s.id })),
 ]);
 const filtered = computed(() => {
   let arr = stateFilter.value === 'all' ? store.threads : store.threads.filter((e) => stateOf(e) === stateFilter.value);
-  if (fScene.value) arr = arr.filter((e) => e.categoryId === fScene.value);
   if (fSubject.value) arr = arr.filter((e) => (e.subjectIds || []).includes(fSubject.value));
   const kw = q.value.trim().toLowerCase();
   if (kw) arr = arr.filter((e) => [e.title, e.fact].some((t) => String(t || '').toLowerCase().includes(kw)));
   return arr;
+});
+// 场景抽屉:按 catalog 顺序,未归类垫底;展开状态持久化
+const OPEN_KEY = 'myevent.eventDrawers';
+const openSet = ref(new Set(JSON.parse(localStorage.getItem(OPEN_KEY) || '[]')));
+function toggleDrawer(k) {
+  const s = new Set(openSet.value);
+  s.has(k) ? s.delete(k) : s.add(k);
+  openSet.value = s;
+  localStorage.setItem(OPEN_KEY, JSON.stringify([...s]));
+}
+const isOpen = (k) => openSet.value.has(k);
+const sceneGroups = computed(() => {
+  const map = new Map();
+  for (const c of catalog.active) map.set(c.id, { key: c.id, name: c.name, color: c.color, list: [] });
+  map.set('未归类', { key: '未归类', name: '未归类', color: '#98a2b3', list: [] });
+  for (const e of filtered.value) {
+    const k = e.categoryId && map.has(e.categoryId) ? e.categoryId : '未归类';
+    map.get(k).list.push(e);
+  }
+  return [...map.values()].filter((g) => g.list.length);
 });
 
 const lastAt = (e) => {
@@ -81,12 +96,19 @@ const emptyText = computed(() => {
     </div>
 
     <van-dropdown-menu style="margin-bottom: 10px">
-      <van-dropdown-item v-model="fScene" :options="sceneOptions" title="场景" />
       <van-dropdown-item v-model="fSubject" :options="subjectOptions" title="对象" />
     </van-dropdown-menu>
 
-    <div v-if="filtered.length" class="card">
-      <div v-for="e in filtered" :key="e.id" class="ev-item" @click="router.push(`/events/${e.id}`)">
+    <FolderDrawer
+      v-for="g in sceneGroups"
+      :key="g.key"
+      :title="g.name"
+      :color="g.color"
+      :count="g.list.length"
+      :open="isOpen(g.key)"
+      @toggle="toggleDrawer(g.key)"
+    >
+      <div v-for="e in g.list" :key="e.id" class="ev-item" @click="router.push(`/events/${e.id}`)">
         <div class="avatar" :style="{ background: `color-mix(in srgb, ${avatarColor(e.id)} 16%, transparent)`, color: avatarColor(e.id) }">{{ e.title.slice(0, 1) }}</div>
         <div class="ev-main">
           <div class="ev-title">
@@ -104,8 +126,8 @@ const emptyText = computed(() => {
           <van-icon name="arrow" color="var(--text-3)" />
         </div>
       </div>
-    </div>
-    <div v-else class="card">
+    </FolderDrawer>
+    <div v-if="!sceneGroups.length" class="card">
       <div class="empty-tip">{{ emptyText[stateFilter] || '筛选无结果 —— 换个条件试试' }}</div>
       <van-button v-if="stateFilter === 'open' && !store.threads.length" type="primary" round block @click="showNew = true">创建第一条线索</van-button>
     </div>
