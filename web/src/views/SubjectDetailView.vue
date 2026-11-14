@@ -14,7 +14,6 @@ import { useCatalogStore } from '../stores/catalog.js';
 import EventComposer from '../components/EventComposer.vue';
 import NoteComposer from '../components/NoteComposer.vue';
 import PredictionComposer from '../components/PredictionComposer.vue';
-import ThreadEditor from '../components/ThreadEditor.vue';
 import SubjectForm from '../components/SubjectForm.vue';
 import StatusTag from '../components/StatusTag.vue';
 import ConfidenceBar from '../components/ConfidenceBar.vue';
@@ -131,7 +130,6 @@ const showEvent = ref(false);
 const showThought = ref(false);
 const showPred = ref(false);
 const showForm = ref(false);
-const showThreadEditor = ref(false);
 
 async function removeSubject() {
   try {
@@ -150,7 +148,7 @@ async function removeSubject() {
         <span class="header-avatar" :style="avatarStyle">{{ subject.name.slice(0, 1) }}</span>{{ subject.name }}
       </h1>
       <span class="head-actions">
-        <van-button size="small" plain round @click="showThreadEditor = true">编辑</van-button>
+        <van-button size="small" plain round @click="showForm = true">编辑</van-button>
         <van-icon name="delete-o" size="20" color="var(--text-3)" @click="removeSubject" />
       </span>
     </div>
@@ -279,7 +277,6 @@ async function removeSubject() {
     <NoteComposer v-model:show="showThought" :subject-id="sid" />
     <PredictionComposer v-model:show="showPred" :subject-id="sid" @saved="router.push(`/predictions/${$event.id}`)" @locked="router.push(`/predictions/${$event.id}`)" />
     <SubjectForm v-model:show="showForm" :subject="subject" :draft="subject?.currentView ? '' : viewDraft" />
-    <ThreadEditor v-model:show="showThreadEditor" :thread="subject" />
   </div>
   <div v-else class="page"><div class="card"><div class="empty-tip">对象不存在或已删除</div></div></div>
 </template>
