@@ -1,9 +1,10 @@
 <script setup>
-// 线索列表:按状态过滤(默认进行中);每条按最后活动倒序,点击进入过程时间线
+// 线索列表:状态过滤 + 场景/对象下拉筛选 + 页内关键词搜索;按最后活动倒序
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 import { useEventStore } from '../stores/event.js';
+import { useSubjectStore } from '../stores/subject.js';
 import { useCatalogStore } from '../stores/catalog.js';
 import EventComposer from '../components/EventComposer.vue';
 import { fmtDate } from '../lib/time.js';
@@ -11,6 +12,7 @@ import { avatarColor } from '../lib/display.js';
 
 const router = useRouter();
 const store = useEventStore();
+const subjectStore = useSubjectStore();
 const catalog = useCatalogStore();
 const showNew = ref(false);
 
@@ -27,21 +29,37 @@ const counts = computed(() => {
   for (const e of store.threads) c[stateOf(e)]++;
   return c;
 });
-const filtered = computed(() =>
-  stateFilter.value === 'all' ? store.threads : store.threads.filter((e) => stateOf(e) === stateFilter.value)
-);
+
+// 归纳分类:场景 / 挂靠对象 下拉 + 页内关键词(标题/事实)
+const fScene = ref('');
+const fSubject = ref('');
+const q = ref('');
+const sceneOptions = computed(() => [
+  { text: '全部场景', value: '' },
+  ...catalog.active.map((c) => ({ text: c.name, value: c.id })),
+]);
+const subjectOptions = computed(() => [
+  { text: '全部对象', value: '' },
+  ...subjectStore.active.map((s) => ({ text: s.name, value: s.id })),
+]);
+const filtered = computed(() => {
+  let arr = stateFilter.value === 'all' ? store.threads : store.threads.filter((e) => stateOf(e) === stateFilter.value);
+  if (fScene.value) arr = arr.filter((e) => e.categoryId === fScene.value);
+  if (fSubject.value) arr = arr.filter((e) => (e.subjectIds || []).includes(fSubject.value));
+  const kw = q.value.trim().toLowerCase();
+  if (kw) arr = arr.filter((e) => [e.title, e.fact].some((t) => String(t || '').toLowerCase().includes(kw)));
+  return arr;
+});
 
 const lastAt = (e) => {
   let t = e.updatedAt || 0;
   for (const en of store.entries) if (!en.deleted && en.eventId === e.id && en.at > t) t = en.at;
   return t;
 };
-const emptyText = {
-  all: '还没有线索',
-  open: '没有进行中的线索 —— 一件开始跟进的事就是一条线索',
-  done: '还没有已完结的线索',
-  shelved: '没有搁置的线索',
-};
+const emptyText = computed(() => {
+  if (store.threads.length === 0) return '还没有线索';
+  return '筛选无结果 —— 换个状态/场景/对象或关键词试试';
+});
 </script>
 
 <template>
@@ -53,12 +71,19 @@ const emptyText = {
 
     <div class="hint-line hint-brand">🧵 线索 = 一件持续跟进的事;完结/搁置只是标记,过程记录全保留</div>
 
-    <div class="seg" style="margin-bottom: 12px">
+    <van-search v-model="q" placeholder="搜线索标题 / 事实" shape="round" background="transparent" />
+
+    <div class="seg" style="margin-bottom: 10px">
       <button :class="{ active: stateFilter === 'open' }" @click="stateFilter = 'open'">进行中 {{ counts.open }}</button>
       <button :class="{ active: stateFilter === 'done' }" @click="stateFilter = 'done'">已完结 {{ counts.done }}</button>
       <button :class="{ active: stateFilter === 'shelved' }" @click="stateFilter = 'shelved'">已搁置 {{ counts.shelved }}</button>
       <button :class="{ active: stateFilter === 'all' }" @click="stateFilter = 'all'">全部 {{ store.threads.length }}</button>
     </div>
+
+    <van-dropdown-menu style="margin-bottom: 10px">
+      <van-dropdown-item v-model="fScene" :options="sceneOptions" title="场景" />
+      <van-dropdown-item v-model="fSubject" :options="subjectOptions" title="对象" />
+    </van-dropdown-menu>
 
     <div v-if="filtered.length" class="card">
       <div v-for="e in filtered" :key="e.id" class="ev-item" @click="router.push(`/events/${e.id}`)">
@@ -81,7 +106,7 @@ const emptyText = {
       </div>
     </div>
     <div v-else class="card">
-      <div class="empty-tip">{{ emptyText[stateFilter] }}</div>
+      <div class="empty-tip">{{ emptyText[stateFilter] || '筛选无结果 —— 换个条件试试' }}</div>
       <van-button v-if="stateFilter === 'open' && !store.threads.length" type="primary" round block @click="showNew = true">创建第一条线索</van-button>
     </div>
 
