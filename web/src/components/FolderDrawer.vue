@@ -13,7 +13,7 @@ defineEmits(['toggle']);
   <div class="folder">
     <button class="folder-head" @click="$emit('toggle')">
       <van-icon name="folder-o" class="f-icon" :style="{ color }" />
-      <span class="f-title" :style="{ color }">{{ title }}</span>
+      <span class="f-title" :style="{ color }">{{ title || '未命名文件夹' }}</span>
       <span class="f-count">{{ count }}</span>
       <van-icon name="arrow" class="f-chev" :class="{ down: open }" />
     </button>

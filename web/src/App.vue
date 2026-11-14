@@ -8,6 +8,7 @@ import { usePredictionStore } from './stores/prediction.js';
 import { useSubjectStore } from './stores/subject.js';
 import { useRuleStore } from './stores/rule.js';
 import { useCatalogStore } from './stores/catalog.js';
+import { useFolderStore } from './stores/folder.js';
 import { useSyncStore } from './stores/sync.js';
 import { isLoggedIn } from './auth/local.js';
 import { ensureSeed } from './db/schema.js';
@@ -18,6 +19,7 @@ const predictionStore = usePredictionStore();
 const subjectStore = useSubjectStore();
 const ruleStore = useRuleStore();
 const catalog = useCatalogStore();
+const folderStore = useFolderStore();
 const sync = useSyncStore();
 
 let unsubs = [];
@@ -30,6 +32,7 @@ onMounted(async () => {
     subjectStore.watch(),
     ruleStore.watch(),
     catalog.watch(),
+    folderStore.watch(),
   ];
   await ensureSeed();
   await Promise.all([
@@ -39,6 +42,7 @@ onMounted(async () => {
     subjectStore.load(),
     ruleStore.load(),
     catalog.load(),
+    folderStore.load(),
   ]);
   if (isLoggedIn()) sync.setup();
   // 原生前台恢复 → 立即同步

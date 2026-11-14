@@ -49,7 +49,8 @@ export const SUBJECT_TYPE_COLOR = {
 export const typeColor = (t) => SUBJECT_TYPE_COLOR[t] || '#98a2b3';
 
 // 头像色:按 id 稳定散列到调色板(同一对象永远同色)
-const AVATAR_PALETTE = ['#4f6ef7', '#7c4dff', '#34c273', '#f5a623', '#00b8d4', '#ee5a5a', '#ff9d5c', '#1e88e5'];
+export const PALETTE = ['#4f6ef7', '#7c4dff', '#34c273', '#f5a623', '#00b8d4', '#ee5a5a', '#ff9d5c', '#1e88e5'];
+const AVATAR_PALETTE = PALETTE;
 export function avatarColor(id) {
   let h = 0;
   for (const c of String(id || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;

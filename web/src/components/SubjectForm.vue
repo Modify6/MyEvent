@@ -4,6 +4,7 @@ import { computed, reactive, ref, watch } from 'vue';
 import { showFailToast, showSuccessToast } from 'vant';
 import dayjs from 'dayjs';
 import { useSubjectStore } from '../stores/subject.js';
+import { useFolderStore } from '../stores/folder.js';
 import { SUBJECT_TYPES, clampPct } from '../lib/domain.js';
 
 const props = defineProps({
@@ -14,11 +15,13 @@ const props = defineProps({
 const emit = defineEmits(['update:show', 'saved']);
 
 const store = useSubjectStore();
+const folderStore = useFolderStore();
 const type = ref('主题');
 const showView = ref(false);
 
 const form = reactive({
   id: null,
+  folderId: '',
   name: '',
   tags: '',
   currentView: '',
@@ -48,6 +51,7 @@ watch(
       nextReviewDate: s?.nextReviewAt ? dayjs(s.nextReviewAt).format('YYYY-MM-DD') : '',
     });
     type.value = s?.type || '主题';
+    form.folderId = s?.folderId || '';
     showView.value = !!(s?.currentView);
     if (!s && props.draft && !form.currentView) form.currentView = props.draft;
   }
@@ -58,6 +62,7 @@ const isEdit = computed(() => !!form.id);
 async function save() {
   try {
     const row = await store.save({
+        folderId: form.folderId || '',
       id: form.id,
       name: form.name,
       type: type.value,
@@ -92,6 +97,11 @@ async function save() {
         <button v-for="t in SUBJECT_TYPES" :key="t" class="tag-chip" :class="{ active: type === t }" @click="type = t">{{ t }}</button>
       </div>
       <van-field v-model="form.tags" label="标签" placeholder="逗号分隔,如: 重要, 长期" />
+      <div class="block-label">📁 文件夹(选填)</div>
+      <div class="chip-row">
+        <button class="tag-chip" :class="{ active: form.folderId === '' }" @click="form.folderId = ''">未分类</button>
+        <button v-for="f in folderStore.byScope('subject')" :key="f.id" class="tag-chip" :class="{ active: form.folderId === f.id }" @click="form.folderId = f.id">{{ f.name }}</button>
+      </div>
 
       <div class="block-label row-between" style="margin-top: 14px">
         <span>当前观点快照<span class="muted">（选填,可后补）</span></span>

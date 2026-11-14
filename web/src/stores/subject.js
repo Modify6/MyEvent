@@ -40,6 +40,7 @@ export const useSubjectStore = defineStore('subject', {
         biggestRisk: String(data.biggestRisk || '').trim(),
         openQuestions: String(data.openQuestions || '').trim(),
         nextReviewAt: data.nextReviewAt || null,
+        folderId: data.folderId ?? exists?.folderId ?? '',
         createdAt: exists?.createdAt || Date.now(),
       };
       await putRow('subjects', row);

@@ -8,18 +8,21 @@ import { useCatalogStore } from '../stores/catalog.js';
 import { TRIGGER_KINDS } from '../lib/domain.js';
 import { trigChipStyle, TRIGGER_ICON } from '../lib/display.js';
 import { toLocalInput, fromLocalInput } from '../lib/time.js';
+import { useFolderStore } from '../stores/folder.js';
 
 const props = defineProps({
   show: { type: Boolean, default: false },
   subjectId: { type: String, default: '' }, // 从对象页打开时预填
+  folderId: { type: String, default: '' }, // 预挂文件夹(从线索页打开时)
 });
 const emit = defineEmits(['update:show', 'saved']);
 
 const eventStore = useEventStore();
 const subjectStore = useSubjectStore();
 const catalog = useCatalogStore();
+const folderStore = useFolderStore();
 
-const form = reactive({ title: '', startAt: '', fact: '', categoryId: '', subjectIds: [], triggerNote: '' });
+const form = reactive({ title: '', startAt: '', fact: '', categoryId: '', subjectIds: [], triggerNote: '', folderId: '' });
 const more = ref(false);
 const triggerKind = ref('');
 
@@ -34,6 +37,7 @@ watch(
       categoryId: '',
       subjectIds: props.subjectId ? [props.subjectId] : [],
       triggerNote: '',
+      folderId: props.folderId || '',
     });
     triggerKind.value = '';
     more.value = false;
@@ -54,6 +58,7 @@ async function save() {
       subjectIds: form.subjectIds,
       categoryId: form.categoryId,
       fact: form.fact,
+      folderId: form.folderId,
     });
     // 捕获时填了触发源 → 成为第 1 条过程记录(这件事的"出发原因")
     if (triggerKind.value || form.triggerNote.trim()) {
@@ -105,7 +110,11 @@ async function save() {
 
       <template v-if="more">
         <van-field v-model="form.startAt" type="datetime-local" label="发生时间" />
-        <div class="block-label">场景标签</div>
+        <div class="block-label">📁 文件夹(选填)</div>
+      <div class="chip-row">
+        <button v-for="f in folderStore.byScope('event')" :key="f.id" class="tag-chip" :class="{ active: form.folderId === f.id }" @click="form.folderId = f.id">{{ f.name }}</button>
+      </div>
+      <div class="block-label">场景标签</div>
         <div class="chip-row">
           <button
             v-for="c in catalog.active"

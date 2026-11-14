@@ -32,6 +32,7 @@ export const TABLES = {
   eventEntries: [
     'id', 'eventId', 'kind', 'content', 'triggerKind', 'triggerNote', 'at', 'edits', 'createdAt', 'updatedAt', 'deleted',
   ],
+  folders: ['id', 'name', 'color', 'sort', 'scope', 'createdAt', 'updatedAt', 'deleted'],
 };
 
 const INT_COLS = new Set([

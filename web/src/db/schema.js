@@ -66,6 +66,21 @@ db.version(4).stores({
   logs: '++id, at',
 });
 
+// v5:自定义文件夹——对象与线索各自的文件夹组(folders),内容挂 folderId(空=未分类)
+db.version(5).stores({
+  events: 'id, categoryId, threadState, folderId, updatedAt, createdAt, deleted',
+  categories: 'id, sort, updatedAt, deleted',
+  subjects: 'id, type, folderId, createdAt, updatedAt, deleted',
+  thoughts: 'id, subjectId, kind, state, at, createdAt, updatedAt, deleted',
+  predictions: 'id, subjectId, kind, status, windowEnd, verifiedAt, createdAt, updatedAt, deleted',
+  rules: 'id, validity, scene, createdAt, updatedAt, deleted',
+  eventEntries: 'id, eventId, at, createdAt, updatedAt, deleted',
+  folders: 'id, sort, updatedAt, deleted',
+  outbox: '++seq, key',
+  meta: 'key',
+  logs: '++id, at',
+});
+
 // 供 E2E 数据库级断言（Playwright）
 if (typeof window !== 'undefined') window.__myeventDebug = { db };
 
