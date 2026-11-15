@@ -1,6 +1,5 @@
 <script setup>
-// 线索列表:状态过滤 + 自定义文件夹抽屉(按 MyAsset 移植的账户模块?)——不:线索抽屉按自定义文件夹
-// 实际结构:状态 seg + 对象下拉 + 关键词 + 自定义文件夹抽屉(未归类垫底)
+// 线索列表:状态过滤 + 对象下拉 + 关键词 + 自定义文件夹抽屉(未分类垫底)
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import dayjs from 'dayjs';
@@ -169,7 +168,7 @@ const showFolderManage = ref(false);
       </div>
     </FolderDrawer>
     <div v-if="!drawersFiltered.length" class="card">
-      <div class="empty-tip">{{ emptyText[stateFilter] || '筛选无结果 —— 换个条件试试' }}</div>
+      <div class="empty-tip">{{ emptyText }}</div>
       <van-button v-if="stateFilter === 'open' && !store.threads.length" type="primary" round block @click="showNew = true">创建第一条线索</van-button>
     </div>
 

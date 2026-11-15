@@ -123,12 +123,12 @@ const typeStyle = (s) => {
 
       <FolderDrawer
         v-for="g in drawers"
-        :key="g.type"
-        :title="g.type"
+        :key="g.key"
+        :title="g.title"
         :color="g.color"
         :count="g.list.length"
-        :open="isOpen(g.type)"
-        @toggle="toggleDrawer(g.type)"
+        :open="isOpen(g.key)"
+        @toggle="toggleDrawer(g.key)"
       >
         <div v-for="s in g.list" :key="s.id" class="subj-line" @click="router.push(`/subjects/${s.id}`)">
           <div class="avatar" :style="avatarStyle(s)">{{ s.name.slice(0, 1) }}</div>
