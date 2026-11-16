@@ -1,10 +1,13 @@
 <script setup>
-// 线索信息编辑:标题/一句话事实/场景/挂靠对象 —— 建后可改
-import { reactive, watch } from 'vue';
+// 线索信息编辑:标题/一句话事实/场景/挂靠对象/文件夹/发生时间 —— 建后可改(修改边界扩大)
+import { reactive, ref, watch } from 'vue';
 import { showFailToast, showSuccessToast } from 'vant';
 import { useEventStore } from '../stores/event.js';
 import { useSubjectStore } from '../stores/subject.js';
 import { useCatalogStore } from '../stores/catalog.js';
+import { useFolderStore } from '../stores/folder.js';
+import FolderQuickCreate from './FolderQuickCreate.vue';
+import { toLocalInput, fromLocalInput } from '../lib/time.js';
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -15,7 +18,8 @@ const emit = defineEmits(['update:show', 'saved']);
 const eventStore = useEventStore();
 const subjectStore = useSubjectStore();
 const catalog = useCatalogStore();
-const form = reactive({ title: '', fact: '', categoryId: '', subjectIds: [] });
+const folderStore = useFolderStore();
+const form = reactive({ title: '', fact: '', categoryId: '', subjectIds: [], folderId: '', startAt: '' });
 
 watch(
   () => props.show,
@@ -27,6 +31,8 @@ watch(
       fact: t?.fact || '',
       categoryId: t?.categoryId || '',
       subjectIds: [...(t?.subjectIds || [])],
+      folderId: t?.folderId || '',
+      startAt: t?.startAt ? toLocalInput(t.startAt) : '',
     });
   }
 );
@@ -37,6 +43,12 @@ function toggleSubject(id) {
   else form.subjectIds.push(id);
 }
 
+// 文件夹就地快速新建:建好即选中
+const showFolderCreate = ref(false);
+function onFolderCreated(id) {
+  form.folderId = id;
+}
+
 async function save() {
   try {
     if (!form.title.trim()) return showFailToast('标题不能为空');
@@ -45,6 +57,8 @@ async function save() {
       fact: form.fact.trim(),
       categoryId: form.categoryId,
       subjectIds: [...form.subjectIds],
+      folderId: form.folderId || '',
+      startAt: fromLocalInput(form.startAt) || props.thread?.startAt || Date.now(),
     });
     showSuccessToast('线索信息已更新');
     emit('saved');
@@ -64,6 +78,7 @@ async function save() {
       </div>
       <van-field v-model="form.title" label="标题" placeholder="线索标题 *" />
       <van-field v-model="form.fact" type="textarea" rows="2" autosize label="一句话事实" placeholder="客观发生了什么" />
+      <van-field v-model="form.startAt" type="datetime-local" label="发生时间" />
       <div class="block-label">场景标签</div>
       <div class="chip-row">
         <button
@@ -80,7 +95,14 @@ async function save() {
         <button v-for="s in subjectStore.active" :key="s.id" class="tag-chip" :class="{ active: form.subjectIds.includes(s.id) }" @click="toggleSubject(s.id)">{{ s.name }}</button>
         <span v-if="!subjectStore.active.length" class="muted">还没有对象</span>
       </div>
+      <div class="block-label">📁 文件夹(选填)</div>
+      <div class="chip-row">
+        <button class="tag-chip" :class="{ active: form.folderId === '' }" @click="form.folderId = ''">未分类</button>
+        <button v-for="f in folderStore.byScope('event')" :key="f.id" class="tag-chip" :class="{ active: form.folderId === f.id }" @click="form.folderId = f.id">{{ f.name }}</button>
+        <button class="tag-chip add-chip" @click="showFolderCreate = true">+ 新建</button>
+      </div>
       <van-button type="primary" round block style="margin-top: 16px" @click="save">保存</van-button>
+      <FolderQuickCreate v-model:show="showFolderCreate" scope="event" @created="onFolderCreated" />
     </div>
   </van-popup>
 </template>
@@ -92,4 +114,5 @@ async function save() {
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 2px; }
 .tag-chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 13px; font-size: 12px; color: var(--text-2); }
 .tag-chip.active { border-color: var(--brand); color: var(--brand); font-weight: 600; background: color-mix(in srgb, var(--brand) 8%, transparent); }
+.tag-chip.add-chip { border-style: dashed; color: var(--text-3); }
 </style>

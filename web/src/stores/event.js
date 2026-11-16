@@ -36,12 +36,13 @@ export const useEventStore = defineStore('event', {
       return onChange(() => this.load());
     },
     // 新建线索：标题必填，其余全可选；填了触发源则自动成为首条过程记录
-    async capture({ title, startAt, endAt, subjectIds = [], categoryId = '', fact = '', note = '' }) {
+    async capture({ title, startAt, endAt, subjectIds = [], categoryId = '', fact = '', note = '', folderId = '' }) {
       if (!String(title || '').trim()) throw new Error('给这条线索起个标题');
       const ev = {
         id: uuid(),
         title: String(title).trim(),
         categoryId: categoryId || '',
+        folderId: folderId || '',
         subjectIds: subjectIds.filter(Boolean),
         fact: String(fact || '').trim(),
         note: note || '',
@@ -107,6 +108,23 @@ export const useEventStore = defineStore('event', {
       };
       await putRow('eventEntries', next);
       logInfo('event', '修改过程记录(已留痕)');
+      return next;
+    },
+    // 过程记录改挂线索:选错线索时移到另一条(内容/时间/触发源原样保留,旧值入修订历史)
+    async moveEntry(id, newEventId) {
+      const en = this.entries.find((x) => x.id === id && !x.deleted);
+      if (!en) throw new Error('记录不存在');
+      if (en.eventId === newEventId) return en;
+      const { db } = await import('../db/schema.js');
+      const ev = await db.events.get(newEventId);
+      if (!ev || ev.deleted) throw new Error('目标线索不存在');
+      const next = {
+        ...en,
+        eventId: newEventId,
+        edits: [...(en.edits || []), { at: Date.now(), content: en.content, triggerKind: en.triggerKind || '', triggerNote: en.triggerNote || '', movedFrom: en.eventId }],
+      };
+      await putRow('eventEntries', next);
+      logInfo('event', '过程记录移至其他线索(已留痕)');
       return next;
     },
     async removeEntry(id) {

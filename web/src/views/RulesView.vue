@@ -10,6 +10,12 @@ import { fmtDate } from '../lib/time.js';
 const store = useRuleStore();
 const q = ref('');
 const showForm = ref(false);
+// 编辑规则:改措辞/场景/触发信号,建后可改(内容过 validateRuleText 校验)
+const editRule = ref(null);
+function openEdit(r) {
+  editRule.value = r;
+  showForm.value = true;
+}
 
 const filtered = computed(() => {
   const kw = q.value.trim().toLowerCase();
@@ -44,7 +50,7 @@ async function mark(r, valid) {
   <div class="page">
     <div class="page-head">
       <h1>经验库</h1>
-      <van-button size="small" round type="primary" icon="plus" @click="showForm = true">新规则</van-button>
+      <van-button size="small" round type="primary" icon="plus" @click="editRule = null; showForm = true">新规则</van-button>
     </div>
 
     <van-search v-model="q" placeholder="搜场景 / 信号 / 规则内容" shape="round" background="transparent" />
@@ -67,6 +73,7 @@ async function mark(r, valid) {
         <div class="rule-foot">
           <span class="muted">验证 {{ r.verifyCount || 0 }} 次{{ r.lastVerifiedAt ? ' · 最近 ' + fmtDate(r.lastVerifiedAt) : '' }}</span>
           <span class="foot-btns">
+            <van-button size="mini" plain round icon="edit" @click="openEdit(r)">编辑</van-button>
             <van-button size="mini" plain round type="success" @click="mark(r, true)">这次有效</van-button>
             <van-button size="mini" plain round type="danger" @click="mark(r, false)">这次无效</van-button>
           </span>
@@ -75,7 +82,7 @@ async function mark(r, valid) {
     </template>
     <div v-else class="card"><div class="empty-tip">{{ store.active.length ? '没有匹配的规则' : '经验库还是空的 —— 完成一次事件复盘,沉淀第一条「如果 X,则 Y」' }}</div></div>
 
-    <RuleComposer v-model:show="showForm" />
+    <RuleComposer v-model:show="showForm" :rule="editRule" @saved="editRule = null" />
   </div>
 </template>
 

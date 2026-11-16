@@ -9,6 +9,7 @@ import { TRIGGER_KINDS } from '../lib/domain.js';
 import { trigChipStyle, TRIGGER_ICON } from '../lib/display.js';
 import { toLocalInput, fromLocalInput } from '../lib/time.js';
 import { useFolderStore } from '../stores/folder.js';
+import FolderQuickCreate from './FolderQuickCreate.vue';
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -25,6 +26,12 @@ const folderStore = useFolderStore();
 const form = reactive({ title: '', startAt: '', fact: '', categoryId: '', subjectIds: [], triggerNote: '', folderId: '' });
 const more = ref(false);
 const triggerKind = ref('');
+
+// 文件夹就地快速新建:建好即选中
+const showFolderCreate = ref(false);
+function onFolderCreated(id) {
+  form.folderId = id;
+}
 
 watch(
   () => props.show,
@@ -113,6 +120,7 @@ async function save() {
         <div class="block-label">📁 文件夹(选填)</div>
       <div class="chip-row">
         <button v-for="f in folderStore.byScope('event')" :key="f.id" class="tag-chip" :class="{ active: form.folderId === f.id }" @click="form.folderId = f.id">{{ f.name }}</button>
+        <button class="tag-chip add-chip" @click="showFolderCreate = true">+ 新建</button>
       </div>
       <div class="block-label">场景标签</div>
         <div class="chip-row">
@@ -131,6 +139,7 @@ async function save() {
       </div>
 
       <van-button type="primary" round block style="margin-top: 14px" @click="save">创建线索</van-button>
+      <FolderQuickCreate v-model:show="showFolderCreate" scope="event" @created="onFolderCreated" />
     </div>
   </van-popup>
 </template>
@@ -143,4 +152,5 @@ async function save() {
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 2px; }
 .tag-chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 13px; font-size: 12px; color: var(--text-2); }
 .tag-chip.active { border-color: var(--brand); color: var(--brand); font-weight: 600; background: color-mix(in srgb, var(--brand) 8%, transparent); }
+.tag-chip.add-chip { border-style: dashed; color: var(--text-3); }
 </style>

@@ -28,6 +28,9 @@ export const useSubjectStore = defineStore('subject', {
     async save(data) {
       const name = String(data.name || '').trim();
       if (!name) throw new Error('请填写对象名称');
+      // 名称唯一:同一名字只允许一个活跃对象,防止同一主体被重复建档(编辑时排除自身)
+      const dup = this.active.find((x) => x.name === name && x.id !== data.id);
+      if (dup) throw new Error(`已有同名对象「${name}」—— 换个名称,或直接选用现有的`);
       const exists = data.id ? this.subjects.find((x) => x.id === data.id) : null;
       const row = {
         id: exists?.id || uuid(),

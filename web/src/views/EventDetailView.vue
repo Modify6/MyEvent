@@ -14,6 +14,7 @@ import NoteEditor from '../components/NoteEditor.vue';
 import ThreadEditor from '../components/ThreadEditor.vue';
 import { kindMeta, parseTrigger } from '../lib/display.js';
 import { fmtDate, fmtTime } from '../lib/time.js';
+import { copyText } from '../lib/clipboard.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -133,6 +134,22 @@ function exportMd() {
   URL.revokeObjectURL(a.href);
   showSuccessToast('已导出 Markdown');
 }
+// 一键复制全文:头部/事实/挂靠/时间线拼纯文本(与导出 Markdown 同结构,直接可粘贴)
+function copyAll() {
+  const lines = [
+    `# ${ev.value.title}`,
+    `- 开始: ${fmtDate(ev.value.startAt)} · 状态: ${STATE_META[stateOf(ev.value)].label} · ${timeline.value.length} 条记录`,
+  ];
+  if (ev.value.subjectIds?.length) lines.push(`- 挂靠: ${ev.value.subjectIds.map((id) => '@ ' + subjectStore.nameOf(id)).join('、')}`);
+  if (ev.value.fact) lines.push(`> ${ev.value.fact}`);
+  lines.push('', '## 时间线', '');
+  for (const it of [...timeline.value].reverse()) {
+    const d = dayjs(it.at).format('YYYY-MM-DD HH:mm');
+    lines.push(`- [${d}] ${it.kind}${it.trigger ? `(${it.trigger})` : ''}: ${it.content}`);
+  }
+  copyText(lines.join('\n'));
+}
+const copyRow = (it) => copyText(it.content);
 const loadMore = () => { limit.value += PAGE_SIZE; };
 
 const showNote = ref(false);
@@ -154,6 +171,7 @@ async function removeThread() {
         <van-icon name="arrow-left" size="20" @click="router.back()" />{{ ev.title }}
       </h1>
       <span class="head-actions">
+        <van-button size="small" plain round icon="records" @click="copyAll">复制全文</van-button>
         <van-button size="small" plain round @click="showThreadEditor = true">编辑</van-button>
         <van-icon name="delete-o" size="20" color="var(--text-3)" @click="removeThread" />
       </span>
@@ -212,6 +230,7 @@ async function removeThread() {
               <template v-if="trig(it.trigger)"> · <span class="trig">{{ trig(it.trigger).icon }} {{ trig(it.trigger).text }}</span></template>
             </div>
           </div>
+          <van-icon name="records" class="row-copy" title="复制这条" @click.stop="copyRow(it)" />
         </div>
       </div>
     </div>
@@ -259,5 +278,6 @@ async function removeThread() {
 .row-main { flex: 1; min-width: 0; }
 .tl-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .tl-item .van-icon { cursor: pointer; margin-top: 3px; flex: none; }
+.row-copy { color: var(--text-3); font-size: 15px; }
 .tl-item { cursor: pointer; -webkit-user-select: none; user-select: none; }
 </style>

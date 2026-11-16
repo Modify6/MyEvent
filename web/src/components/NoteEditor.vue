@@ -1,7 +1,7 @@
 <script setup>
 // 记录二次编辑:新值生效,旧值进 edits 修订历史 —— 改变要有记录
-// 编辑能力与创建细节对齐:内容/类型/触发源/时间,thought 还可改挂靠对象与线索
-import { reactive, ref, watch } from 'vue';
+// 编辑能力与创建细节对齐:内容/类型/触发源/时间;thought 可改挂靠对象与线索,entry 可改挂其他线索(选错线索时移过去)
+import { computed, reactive, ref, watch } from 'vue';
 import { showFailToast, showSuccessToast } from 'vant';
 import { useEventStore } from '../stores/event.js';
 import { useThoughtStore } from '../stores/thought.js';
@@ -29,6 +29,16 @@ const form = reactive({
 
 const isEntry = () => !!props.entry;
 const isSummary = () => props.entry?.kind === 'summary';
+
+// entry 改挂列表:最近 8 条 + 当前所属(保证现在挂的线索始终可见)
+const entryThreads = computed(() => {
+  const list = eventStore.threads.slice(0, 8);
+  if (form.eventId && !list.some((e) => e.id === form.eventId)) {
+    const cur = eventStore.byId(form.eventId);
+    if (cur) list.push(cur);
+  }
+  return list;
+});
 
 // thought.source 的拼装/解析(「由X触发:说明」)与创建侧保持一致
 function parseSource(src) {
@@ -65,7 +75,7 @@ watch(
         triggerNote: en.triggerNote || '',
         at: toLocalInput(en.at),
         subjectId: '',
-        eventId: '',
+        eventId: en.eventId || '',
       });
     }
     showHistory.value = false;
@@ -97,6 +107,10 @@ async function save() {
         triggerNote: isSummary() ? '' : form.triggerNote,
         at,
       });
+      // 改挂其他线索(选错线索时移过去;与原线索相同则无操作)
+      if (form.eventId && form.eventId !== props.entry.eventId) {
+        await eventStore.moveEntry(props.entry.id, form.eventId);
+      }
     } else {
       await thoughtStore.edit(props.thought.id, {
         content: form.content,
@@ -140,7 +154,7 @@ async function save() {
         <van-field v-model="form.triggerNote" type="textarea" rows="1" autosize placeholder="触发说明" />
       </template>
 
-      <!-- 挂靠:与创建细节对齐(thought 可改挂对象/线索;entry 属于其线索不可改) -->
+      <!-- 挂靠:与创建细节对齐(thought 可改挂对象/线索;entry 可改挂其他线索) -->
       <template v-if="!isEntry()">
         <div class="block-label row-between">
           <span>挂到线索 · 哪件事</span>
@@ -154,6 +168,12 @@ async function save() {
         <div class="chip-row">
           <button v-for="s in subjectStore.active" :key="s.id" class="tag-chip" :class="{ active: form.subjectId === s.id }" @click="form.subjectId = form.subjectId === s.id ? '' : s.id">{{ s.name }}</button>
           <button class="tag-chip add-chip" @click="quickCreate('subject')">+ 新建</button>
+        </div>
+      </template>
+      <template v-else>
+        <div class="block-label">所属线索 · 记错了就移到别的事件</div>
+        <div class="chip-row">
+          <button v-for="e in entryThreads" :key="e.id" class="tag-chip" :class="{ active: form.eventId === e.id }" @click="form.eventId = e.id">{{ e.title.slice(0, 12) }}</button>
         </div>
       </template>
 

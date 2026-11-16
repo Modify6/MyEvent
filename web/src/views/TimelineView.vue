@@ -13,6 +13,7 @@ import QuickCreate from '../components/QuickCreate.vue';
 import AttachGuide from '../components/AttachGuide.vue';
 import ConvertToThread from '../components/ConvertToThread.vue';
 import SyncDot from '../components/SyncDot.vue';
+import { copyText } from '../lib/clipboard.js';
 import { THOUGHT_KINDS, TRIGGER_KINDS } from '../lib/domain.js';
 import { getLastAttach, setLastAttach } from '../auth/local.js';
 import { kindChipStyle, kindMeta, trigChipStyle, TRIGGER_ICON, parseTrigger } from '../lib/display.js';
@@ -124,6 +125,8 @@ const groups = computed(() => {
 
 const subjectName = (id) => subjectStore.nameOf(id);
 const eventTitle = (id) => eventStore.byId(id)?.title || '线索';
+// 一键复制这条记录的原文
+const copyRow = (it) => copyText(it.content);
 // 视觉映射:类型色标签 / 触发源图标
 const kindStyle = (k) => {
   const m = kindMeta(k);
@@ -291,6 +294,7 @@ function onSheetSelect(a) {
                 <span v-if="it.subjectId" class="chip chip-subject" @click.stop="router.push(`/subjects/${it.subjectId}`)">@ {{ subjectName(it.subjectId) }}</span>
               </div>
             </div>
+            <van-icon name="records" class="row-copy" title="复制这条" @click.stop="copyRow(it)" />
           </div>
         </div>
       </div>
@@ -340,6 +344,7 @@ function onSheetSelect(a) {
 .feed-kind { flex: none; font-size: 11px; border: 1px solid; border-radius: 4px; padding: 1px 6px; height: fit-content; margin-top: 2px; white-space: nowrap; font-weight: 600; }
 .trig { color: var(--text-2); }
 .row-main { flex: 1; min-width: 0; }
+.row-copy { color: var(--text-3); font-size: 15px; margin-top: 3px; flex: none; cursor: pointer; }
 .feed-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .feed-chips { margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; }
 .feed-chips .chip { cursor: pointer; }

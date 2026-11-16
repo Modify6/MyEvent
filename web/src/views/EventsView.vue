@@ -150,11 +150,12 @@ const showFolderManage = ref(false);
     >
       <div v-for="e in g.list" :key="e.id" class="ev-item" @click="router.push(`/events/${e.id}`)">
         <div class="avatar" :style="{ background: `color-mix(in srgb, ${avatarColor(e.id)} 16%, transparent)`, color: avatarColor(e.id) }">{{ e.title.slice(0, 1) }}</div>
-        <div class="ev-main">
-          <div class="ev-title">
-            {{ e.title }}
-            <span v-if="e.categoryId" class="chip" :style="{ '--c': catalog.catColor(e.categoryId) }">{{ catalog.catName(e.categoryId) }}</span>
-          </div>
+          <div class="ev-main">
+            <div class="ev-title">
+              <span v-if="e.subjectIds?.length" class="ev-subj">@ {{ subjectStore.nameOf(e.subjectIds[0]) }}<template v-if="e.subjectIds.length > 1"> +{{ e.subjectIds.length - 1 }}</template></span>
+              {{ e.title }}
+              <span v-if="e.categoryId" class="chip" :style="{ '--c': catalog.catColor(e.categoryId) }">{{ catalog.catName(e.categoryId) }}</span>
+            </div>
           <div class="muted">
             {{ fmtDate(e.startAt) }} 开始<template v-if="store.entryCountOf(e.id)"> · {{ store.entryCountOf(e.id) }} 条记录</template>
             <template v-if="lastAt(e) > e.startAt"> · 最近 {{ dayjs(lastAt(e)).format('M月D日') }}</template>
@@ -191,6 +192,7 @@ const showFolderManage = ref(false);
 .ev-item:last-child { border-bottom: 0; }
 .ev-main { flex: 1; min-width: 0; }
 .ev-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ev-subj { color: var(--brand); font-weight: 600; font-size: 12px; flex: none; }
 .ev-note { font-size: 12px; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ev-side { display: flex; align-items: center; gap: 10px; }
 .avatar { flex: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; }

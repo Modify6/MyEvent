@@ -5,6 +5,7 @@ import { showFailToast, showSuccessToast } from 'vant';
 import dayjs from 'dayjs';
 import { useSubjectStore } from '../stores/subject.js';
 import { useFolderStore } from '../stores/folder.js';
+import FolderQuickCreate from './FolderQuickCreate.vue';
 import { SUBJECT_TYPES, clampPct } from '../lib/domain.js';
 
 const props = defineProps({
@@ -59,6 +60,12 @@ watch(
 
 const isEdit = computed(() => !!form.id);
 
+// 文件夹就地快速新建:建好即选中
+const showFolderCreate = ref(false);
+function onFolderCreated(id) {
+  form.folderId = id;
+}
+
 async function save() {
   try {
     const row = await store.save({
@@ -101,6 +108,7 @@ async function save() {
       <div class="chip-row">
         <button class="tag-chip" :class="{ active: form.folderId === '' }" @click="form.folderId = ''">未分类</button>
         <button v-for="f in folderStore.byScope('subject')" :key="f.id" class="tag-chip" :class="{ active: form.folderId === f.id }" @click="form.folderId = f.id">{{ f.name }}</button>
+        <button class="tag-chip add-chip" @click="showFolderCreate = true">+ 新建</button>
       </div>
 
       <div class="block-label row-between" style="margin-top: 14px">
@@ -124,6 +132,7 @@ async function save() {
       </template>
 
       <van-button type="primary" round block style="margin-top: 16px" @click="save">{{ isEdit ? '保存' : '创建' }}</van-button>
+      <FolderQuickCreate v-model:show="showFolderCreate" scope="subject" @created="onFolderCreated" />
     </div>
   </van-popup>
 </template>
@@ -136,6 +145,7 @@ async function save() {
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 2px; }
 .tag-chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 13px; font-size: 12px; color: var(--text-2); }
 .tag-chip.active { border-color: var(--brand); color: var(--brand); font-weight: 600; background: color-mix(in srgb, var(--brand) 8%, transparent); }
+.tag-chip.add-chip { border-style: dashed; color: var(--text-3); }
 .slider-row { display: flex; align-items: center; gap: 10px; padding: 0 16px 4px; }
 .conf-num { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 40px; text-align: right; }
 </style>
