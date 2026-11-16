@@ -85,6 +85,24 @@ describe('线索处理状态(event.setThreadState 扩展)', () => {
   });
 });
 
+describe('过程记录处理状态(event.setEntryHandle)', () => {
+  it('过程记录标已处理+说明,留痕;切回清时间', async () => {
+    const ev = await eventStore.capture({ title: '开发中的 app' });
+    const en = await eventStore.addEntry({ eventId: ev.id, content: '需求:处理状态功能' });
+    expect(en.handleStatus).toBe('pending');
+    await eventStore.setEntryHandle(en.id, 'done', 'v0.8.0 已实现');
+    await eventStore.load();
+    const row = eventStore.entries.find((x) => x.id === en.id);
+    expect(row.handleStatus).toBe('done');
+    expect(row.handleNote).toBe('v0.8.0 已实现');
+    expect(row.statusHistory).toHaveLength(1);
+    expect(row.statusHistory[0]).toMatchObject({ from: 'pending', to: 'done', note: 'v0.8.0 已实现' });
+    await eventStore.setEntryHandle(en.id, 'pending', '');
+    expect(eventStore.entries.find((x) => x.id === en.id).handledAt).toBeNull();
+    await expect(eventStore.setEntryHandle(en.id, 'bogus', '')).rejects.toThrow('未知的处理状态');
+  });
+});
+
 describe('同步层 normalizeRow(statusHistory 列)', () => {
   it('服务端 JSON 字符串反序列化;空值回落 []', () => {
     const hist = [{ at: 1, from: 'pending', to: 'done', note: 'ok' }];
@@ -92,5 +110,6 @@ describe('同步层 normalizeRow(statusHistory 列)', () => {
     expect(row.statusHistory).toEqual(hist);
     expect(normalizeRow('thoughts', { id: 'y' }).statusHistory).toEqual([]);
     expect(normalizeRow('events', { id: 'z' }).statusHistory).toEqual([]);
+    expect(normalizeRow('eventEntries', { id: 'w' }).statusHistory).toEqual([]);
   });
 });

@@ -11,8 +11,8 @@ import { fmtDate, fmtTime } from '../lib/time.js';
 
 const props = defineProps({
   show: { type: Boolean, default: false },
-  type: { type: String, required: true }, // 'thought' | 'event'
-  target: { type: Object, default: null }, // thought 或 event 行
+  type: { type: String, required: true }, // 'thought' | 'entry' | 'event'
+  target: { type: Object, default: null }, // thought / eventEntry / event 行
   preset: { type: String, default: '' }, // 预选状态(从「完结/有问题」等快捷按钮进入时)
 });
 const emit = defineEmits(['update:show', 'saved']);
@@ -23,21 +23,24 @@ const form = reactive({ status: '', note: '' });
 const showHistory = ref(false);
 
 const isThought = () => props.type === 'thought';
+const isEntry = () => props.type === 'entry';
+// 记录类(thought/entry)走三态;线索(event)走 threadState 全集
+const isThread = () => props.type === 'event';
 
-// 可选状态:记录走三态;线索用 threadState 全集(进行中/已完结/已搁置/有问题)
+// 可选状态:记录三态;线索 threadState 全集(进行中/已完结/已搁置/有问题)
 const STATUS_OPTIONS = computed(() =>
-  isThought()
-    ? HANDLE_STATUSES.map((s) => ({ key: s, ...HANDLE_STATUS_META[s] }))
-    : Object.entries(THREAD_STATE_META).map(([key, m]) => ({ key, ...m }))
+  isThread()
+    ? Object.entries(THREAD_STATE_META).map(([key, m]) => ({ key, ...m }))
+    : HANDLE_STATUSES.map((s) => ({ key: s, ...HANDLE_STATUS_META[s] }))
 );
 
 // van-tag type → 页内 CSS 色(与全局用色一致)
 const colorOf = (type) => ({ primary: 'var(--brand)', success: '#34c273', warning: '#f5a623', danger: 'var(--danger)' }[type] || 'var(--brand)');
 
-// 历史条目的状态名:按当前弹层类型选映射优先级(thought 的 done=已处理,event 的 done=已完结)
+// 历史条目的状态名:记录类(thought/entry)的 done=已处理,线索的 done=已完结
 const statusLabel = (s) => {
-  const primary = isThought() ? HANDLE_STATUS_META[s] : THREAD_STATE_META[s];
-  const fallback = isThought() ? THREAD_STATE_META[s] : HANDLE_STATUS_META[s];
+  const primary = isThread() ? THREAD_STATE_META[s] : HANDLE_STATUS_META[s];
+  const fallback = isThread() ? HANDLE_STATUS_META[s] : THREAD_STATE_META[s];
   return (primary || fallback)?.label || s;
 };
 
@@ -45,7 +48,8 @@ const statusLabel = (s) => {
 const currentStatus = computed(() => {
   const t = props.target;
   if (!t) return '';
-  return isThought() ? t.handleStatus || 'pending' : t.threadState || 'open';
+  if (isThread()) return t.threadState || 'open';
+  return t.handleStatus || 'pending';
 });
 const history = computed(() => props.target?.statusHistory || []);
 
@@ -63,10 +67,12 @@ async function save() {
   try {
     const t = props.target;
     if (!t) return;
-    if (isThought()) {
-      await thoughtStore.setHandle(t.id, form.status, form.note);
-    } else {
+    if (isThread()) {
       await eventStore.setThreadState(t.id, form.status, form.note);
+    } else if (isEntry()) {
+      await eventStore.setEntryHandle(t.id, form.status, form.note);
+    } else {
+      await thoughtStore.setHandle(t.id, form.status, form.note);
     }
     showSuccessToast('处理状态已更新(已留痕)');
     emit('saved');

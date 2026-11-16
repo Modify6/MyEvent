@@ -91,7 +91,7 @@ export const JSON_COLS = {
   thoughts: ['edits', 'statusHistory'],
   predictions: ['basis', 'criteria', 'result', 'lockSnapshot'],
   rules: ['refEvents', 'refPredictions'],
-  eventEntries: ['edits'],
+  eventEntries: ['edits', 'statusHistory'],
 };
 
 export function normalizeRow(table, row) {

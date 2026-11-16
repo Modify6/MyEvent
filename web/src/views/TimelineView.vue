@@ -103,13 +103,14 @@ const feed = computed(() => {
       trigger: en.triggerKind ? `由${en.triggerKind}触发${en.triggerNote ? ':' + en.triggerNote : ''}` : (en.triggerNote || ''),
       summary: en.kind === 'summary', edited: (en.edits || []).length > 0,
       subjectId: (eventStore.byId(en.eventId)?.subjectIds || [])[0] || '', eventId: en.eventId,
+      handleStatus: en.handleStatus || 'pending', handleNote: en.handleNote || '',
     });
   }
   let arr = items.sort((a, b) => b.at - a.at);
   if (fType.value) arr = arr.filter((it) => it.kind === fType.value);
   if (fSubject.value) arr = arr.filter((it) => it.subjectId === fSubject.value);
   if (fThread.value) arr = arr.filter((it) => it.eventId === fThread.value);
-  if (fHandle.value) arr = arr.filter((it) => it.type === 't' && it.handleStatus === fHandle.value);
+  if (fHandle.value) arr = arr.filter((it) => it.handleStatus === fHandle.value);
   return arr;
 });
 
@@ -194,13 +195,11 @@ const showConvert = ref(false);
 function startConvert() {
   showConvert.value = true;
 }
-// 操作菜单按记录类型动态生成:想法多「转为线索」「标记处理」
+// 操作菜单按记录类型动态生成:想法多「转为线索」;全部记录都可「标记处理」
 const sheetActions = computed(() => {
   const a = [{ name: '编辑', key: 'edit' }];
-  if (editItem.value?.type === 't') {
-    a.splice(1, 0, { name: '转为线索', key: 'convert' });
-    a.splice(2, 0, { name: '标记处理', key: 'handle' });
-  }
+  if (editItem.value?.type === 't') a.splice(1, 0, { name: '转为线索', key: 'convert' });
+  a.splice(editItem.value?.type === 't' ? 2 : 1, 0, { name: '标记处理', key: 'handle' });
   a.push({ name: '删除', key: 'remove', color: 'var(--danger)' });
   return a;
 });
@@ -212,11 +211,11 @@ function onSheetSelect(a) {
   else if (a.key === 'remove') removeItem(editItem.value);
 }
 
-// 标记处理:点状态 tag 或长按菜单,打开共用弹层
+// 标记处理:点状态 tag 或长按菜单,打开共用弹层(thought 与 entry 都可标)
 const showHandle = ref(false);
 const handleItem = ref(null);
+const handleType = computed(() => (handleItem.value?.type === 'e' ? 'entry' : 'thought'));
 function openHandle(it) {
-  if (it.type !== 't') return;
   handleItem.value = it;
   showHandle.value = true;
 }
@@ -297,7 +296,7 @@ function openHandle(it) {
         <div v-for="it in list" :key="it.key">
           <div
             class="feed-item"
-            :class="{ summary: it.summary, handled: it.type === 't' && it.handleStatus === 'done', issue: it.type === 't' && it.handleStatus === 'issue' }"
+            :class="{ summary: it.summary, handled: it.handleStatus === 'done', issue: it.handleStatus === 'issue' }"
             @click="onItemClick(it)"
             @touchstart.passive="startPress(it)"
             @touchmove.passive="cancelPress"
@@ -307,7 +306,7 @@ function openHandle(it) {
             <div class="feed-kind" :style="kindStyle(it.kind)">{{ kindIcon(it.kind) }} {{ it.kind }}</div>
             <div class="row-main">
               <div class="feed-text">{{ it.content }}</div>
-              <div v-if="it.type === 't' && it.handleStatus !== 'pending' && it.handleNote" class="handle-note">{{ HANDLE_STATUS_META[it.handleStatus].label }}:{{ it.handleNote }}</div>
+              <div v-if="it.handleStatus !== 'pending' && it.handleNote" class="handle-note">{{ HANDLE_STATUS_META[it.handleStatus].label }}:{{ it.handleNote }}</div>
               <div class="muted">
                 {{ fmtTime(it.at) }}
                 <template v-if="it.edited"> · ✎ 已编辑</template>
@@ -316,7 +315,7 @@ function openHandle(it) {
               <div class="feed-chips">
                 <span v-if="it.eventId" class="chip chip-thread" @click.stop="router.push(`/events/${it.eventId}`)"># {{ eventTitle(it.eventId) }}</span>
                 <span v-if="it.subjectId" class="chip chip-subject" @click.stop="router.push(`/subjects/${it.subjectId}`)">@ {{ subjectName(it.subjectId) }}</span>
-                <span v-if="it.type === 't'" class="handle-tag" title="标记处理" @click.stop="openHandle(it)">
+                <span class="handle-tag" title="标记处理" @click.stop="openHandle(it)">
                   <StatusTag kind="handle" :status="it.handleStatus" />
                 </span>
               </div>
@@ -337,7 +336,7 @@ function openHandle(it) {
 
     <QuickCreate v-model:show="showQuickCreate" :type="quickCreateType" @created="onQuickCreated" />
     <AttachGuide v-model:show="showGuide" />
-    <HandleStatusSheet v-model:show="showHandle" type="thought" :target="handleItem?.raw || null" @saved="handleItem = null" />
+    <HandleStatusSheet v-model:show="showHandle" :type="handleType" :target="handleItem?.raw || null" @saved="handleItem = null" />
 
     <van-action-sheet
       v-model:show="showActions"

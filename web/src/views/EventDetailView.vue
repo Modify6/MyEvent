@@ -13,6 +13,7 @@ import NoteComposer from '../components/NoteComposer.vue';
 import NoteEditor from '../components/NoteEditor.vue';
 import ThreadEditor from '../components/ThreadEditor.vue';
 import HandleStatusSheet from '../components/HandleStatusSheet.vue';
+import StatusTag from '../components/StatusTag.vue';
 import { kindMeta, parseTrigger } from '../lib/display.js';
 import { fmtDate, fmtTime } from '../lib/time.js';
 import { copyText } from '../lib/clipboard.js';
@@ -27,7 +28,7 @@ const catalog = useCatalogStore();
 const eid = computed(() => route.params.id);
 const ev = computed(() => eventStore.byId(eid.value));
 
-// 过程时间线:过程记录(含小结) + 挂靠本线索的随手记,倒序
+// 过程时间线:过程记录(含小结) + 挂靠本线索的随手记,倒序;行带处理状态(thought/entry 都可标)
 const timeline = computed(() => {
   const items = [];
   for (const en of eventStore.entriesOf(eid.value)) {
@@ -35,6 +36,7 @@ const timeline = computed(() => {
       key: 'en:' + en.id, type: 'e', raw: en, kind: en.kind === 'summary' ? '小结' : '记录', summary: en.kind === 'summary',
       content: en.content, at: en.at, edited: (en.edits || []).length > 0,
       trigger: en.triggerKind ? `由${en.triggerKind}触发${en.triggerNote ? ':' + en.triggerNote : ''}` : (en.triggerNote || ''),
+      handleStatus: en.handleStatus || 'pending', handleNote: en.handleNote || '',
     });
   }
   for (const t of thoughtStore.ofEvent(eid.value)) {
@@ -42,6 +44,7 @@ const timeline = computed(() => {
       key: 't:' + t.id, type: 't', raw: t, kind: t.kind + ' · 挂记', summary: false,
       content: t.content, at: t.at, edited: (t.edits || []).length > 0,
       trigger: t.source || '',
+      handleStatus: t.handleStatus || 'pending', handleNote: t.handleNote || '',
     });
   }
   return items.sort((a, b) => b.at - a.at);
@@ -103,7 +106,7 @@ const tlShown = computed(() => timelineFiltered.value.slice(0, limit.value));
 const hasMore = computed(() => timelineFiltered.value.length > limit.value);
 
 // 软收尾:完结/搁置/有问题/重新打开(纯手动标记,过程全保留;状态变更统一走标记处理弹层,可填结果说明)
-import { THREAD_STATE_META } from '../lib/domain.js';
+import { THREAD_STATE_META, HANDLE_STATUS_META } from '../lib/domain.js';
 const stateOf = (e) => e?.threadState || 'open';
 // 标记处理:弹层选状态+填结果说明(完结/有问题且填了说明会自动落一条过程记录)
 const showHandle = ref(false);
@@ -111,6 +114,14 @@ const presetState = ref('');
 function openHandle(state) {
   presetState.value = state || '';
   showHandle.value = true;
+}
+// 时间线行的记录级标记:thought/entry 各自标处理状态(与线索级互不影响)
+const showRowHandle = ref(false);
+const rowHandleItem = ref(null);
+const rowHandleType = computed(() => (rowHandleItem.value?.type === 'e' ? 'entry' : 'thought'));
+function openRowHandle(it) {
+  rowHandleItem.value = it;
+  showRowHandle.value = true;
 }
 // 线索导出 Markdown:完整时间线(含触发源/小结)存成可读文档
 function exportMd() {
@@ -218,7 +229,7 @@ async function removeThread() {
       <div v-for="it in tlShown" :key="it.key">
         <div
           class="tl-item"
-          :class="{ summary: it.summary }"
+          :class="{ summary: it.summary, handled: it.handleStatus === 'done', issue: it.handleStatus === 'issue' }"
           @click="onItemClick(it)"
           @touchstart.passive="startPress(it)"
           @touchmove.passive="cancelPress"
@@ -228,10 +239,16 @@ async function removeThread() {
           <div class="tl-kind" :style="kindStyle(it.kind)">{{ kindIcon(it.kind) }}</div>
           <div class="row-main">
             <div class="tl-text">{{ it.content }}</div>
+            <div v-if="it.handleStatus !== 'pending' && it.handleNote" class="handle-note">{{ HANDLE_STATUS_META[it.handleStatus].label }}:{{ it.handleNote }}</div>
             <div class="muted">
               {{ it.kind }} · {{ fmtDate(it.at) }} {{ fmtTime(it.at) }}
               <template v-if="it.edited"> · ✎ 已编辑</template>
               <template v-if="trig(it.trigger)"> · <span class="trig">{{ trig(it.trigger).icon }} {{ trig(it.trigger).text }}</span></template>
+            </div>
+            <div class="feed-chips">
+              <span class="handle-tag" title="标记处理" @click.stop="openRowHandle(it)">
+                <StatusTag kind="handle" :status="it.handleStatus" />
+              </span>
             </div>
           </div>
           <van-icon name="records" class="row-copy" title="复制这条" @click.stop="copyRow(it)" />
@@ -248,16 +265,18 @@ async function removeThread() {
     <NoteEditor v-model:show="showEditor" :thought="editItem?.type === 't' ? editItem.raw : null" :entry="editItem?.type === 'e' ? editItem.raw : null" @saved="editItem = null" />
     <ThreadEditor v-model:show="showThreadEditor" :thread="ev" />
     <HandleStatusSheet v-model:show="showHandle" type="event" :target="ev" :preset="presetState" @saved="presetState = ''" />
+    <HandleStatusSheet v-model:show="showRowHandle" :type="rowHandleType" :target="rowHandleItem?.raw || null" @saved="rowHandleItem = null" />
 
     <van-action-sheet
       v-model:show="showActions"
       :actions="[
         { name: '编辑', key: 'edit' },
+        { name: '标记处理', key: 'handle' },
         { name: '删除', key: 'remove', color: 'var(--danger)' },
       ]"
       cancel-text="取消"
       close-on-click-action
-      @select="(a) => (a.key === 'edit' ? openEdit(editItem) : removeItem(editItem))"
+      @select="(a) => (a.key === 'edit' ? openEdit(editItem) : a.key === 'handle' ? openRowHandle(editItem) : removeItem(editItem))"
     />
   </div>
   <div v-else class="page"><div class="card"><div class="empty-tip">线索不存在或已删除</div></div></div>
@@ -284,5 +303,11 @@ async function removeThread() {
 .tl-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .tl-item .van-icon { cursor: pointer; margin-top: 3px; flex: none; }
 .row-copy { color: var(--text-3); font-size: 15px; }
+.tl-item.handled .tl-text { color: var(--text-3); }
+.tl-item.issue .tl-text { color: var(--text-2); }
+.handle-note { font-size: 12px; margin-top: 3px; color: var(--text-2); background: var(--card-2); border-radius: 6px; padding: 4px 8px; white-space: pre-wrap; word-break: break-word; }
+.tl-item.issue .handle-note { color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
+.feed-chips { margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; }
+.handle-tag { cursor: pointer; display: inline-flex; }
 .tl-item { cursor: pointer; -webkit-user-select: none; user-select: none; }
 </style>

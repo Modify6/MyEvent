@@ -31,7 +31,8 @@ export const TABLES = {
     'verifyCount', 'validity', 'lastVerifiedAt', 'createdAt', 'updatedAt', 'deleted',
   ],
   eventEntries: [
-    'id', 'eventId', 'kind', 'content', 'triggerKind', 'triggerNote', 'at', 'edits', 'createdAt', 'updatedAt', 'deleted',
+    'id', 'eventId', 'kind', 'content', 'triggerKind', 'triggerNote', 'at', 'edits',
+    'handleStatus', 'handleNote', 'handledAt', 'statusHistory', 'createdAt', 'updatedAt', 'deleted',
   ],
   folders: ['id', 'name', 'color', 'sort', 'scope', 'createdAt', 'updatedAt', 'deleted'],
 };

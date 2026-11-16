@@ -4,7 +4,7 @@ import { defineStore } from 'pinia';
 import { putRow, softDelete, getAllEvents, getAllEventEntries, onChange } from '../db/repo.js';
 import { uuid } from '../lib/util.js';
 import { logInfo } from '../lib/logger.js';
-import { TRIGGER_KINDS, THREAD_STATES, THREAD_STATE_META } from '../lib/domain.js';
+import { TRIGGER_KINDS, THREAD_STATES, THREAD_STATE_META, HANDLE_STATUSES } from '../lib/domain.js';
 
 export const useEventStore = defineStore('event', {
   state: () => ({ events: [], entries: [], loaded: false }),
@@ -88,9 +88,11 @@ export const useEventStore = defineStore('event', {
         triggerKind: TRIGGER_KINDS.includes(triggerKind) ? triggerKind : '',
         triggerNote: String(triggerNote || '').trim(),
         at: at || Date.now(),
+        handleStatus: 'pending',
         createdAt: Date.now(),
       };
       await putRow('eventEntries', row);
+      this.entries.push(row);
       logInfo('event', kind === 'summary' ? '写小结' : `追加过程记录(${row.triggerKind || '无触发源'})`);
       return row;
     },
@@ -127,6 +129,26 @@ export const useEventStore = defineStore('event', {
       };
       await putRow('eventEntries', next);
       logInfo('event', '过程记录移至其他线索(已留痕)');
+      return next;
+    },
+    // 过程记录标记处理:通用三态(未处理/已处理/有问题)+结果说明,变更写 statusHistory 留痕
+    async setEntryHandle(id, status, note = '') {
+      const en = this.entries.find((x) => x.id === id && !x.deleted);
+      if (!en) throw new Error('记录不存在');
+      if (!HANDLE_STATUSES.includes(status)) throw new Error('未知的处理状态');
+      const text = String(note || '').trim();
+      const from = en.handleStatus || 'pending';
+      const next = {
+        ...en,
+        handleStatus: status,
+        handleNote: text,
+        handledAt: status === 'pending' ? null : Date.now(),
+        statusHistory: [...(en.statusHistory || []), { at: Date.now(), from, to: status, note: text }],
+      };
+      await putRow('eventEntries', next);
+      const idx = this.entries.findIndex((x) => x.id === id);
+      if (idx >= 0) this.entries[idx] = next;
+      logInfo('event', `过程记录处理状态 → ${status}${text ? `:${text.slice(0, 20)}` : ''}`);
       return next;
     },
     async removeEntry(id) {
