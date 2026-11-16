@@ -133,6 +133,22 @@ const groups = computed(() => {
   return [...map.entries()];
 });
 
+// 挂靠联动:选了对象,线索 chips 收窄为该对象下的线索(当前已选的线索不在其中也保留显示)
+const attachThreads = computed(() => {
+  let list;
+  if (form.subjectId) {
+    list = eventStore.threads.filter((e) => (e.subjectIds || []).includes(form.subjectId)).slice(0, 12);
+    if (form.eventId && !list.some((e) => e.id === form.eventId)) {
+      const cur = eventStore.byId(form.eventId);
+      if (cur) list = [...list, cur];
+    }
+  } else {
+    list = eventStore.threads.slice(0, 6);
+  }
+  return list;
+});
+const attachSubjectName = computed(() => subjectStore.nameOf(form.subjectId));
+
 const subjectName = (id) => subjectStore.nameOf(id);
 const eventTitle = (id) => eventStore.byId(id)?.title || '线索';
 // 一键复制这条记录的原文
@@ -267,13 +283,14 @@ function openHandle(it) {
         </div>
         <van-field v-model="form.triggerNote" type="textarea" rows="1" autosize placeholder="触发说明(选填)" />
         <div class="block-label row-between">
-          <span>挂到线索 · 哪件事(选填)</span>
+          <span>挂到线索 · 哪件事(选填)<template v-if="form.subjectId"><span class="muted"> · @{{ attachSubjectName }} 下的线索</span></template></span>
           <span class="guide-link" @click="showGuide = true">怎么选?</span>
         </div>
         <div class="chip-row">
-          <button v-for="e in eventStore.threads.slice(0, 6)" :key="e.id" class="tag-chip" :class="{ active: form.eventId === e.id }" @click="form.eventId = form.eventId === e.id ? '' : e.id">{{ e.title.slice(0, 10) }}</button>
+          <button v-for="e in attachThreads" :key="e.id" class="tag-chip" :class="{ active: form.eventId === e.id }" @click="form.eventId = form.eventId === e.id ? '' : e.id">{{ e.title.slice(0, 10) }}</button>
           <button class="tag-chip add-chip" @click="quickCreate('event')">+ 新建</button>
         </div>
+        <div v-if="form.subjectId && !attachThreads.length" class="muted" style="padding: 2px 4px">该主题下还没有线索 —— 可不挂,或点「+ 新建」建一条</div>
         <div class="block-label">挂到对象 · 关于谁(选填)</div>
         <div class="chip-row">
           <button v-for="s in subjectStore.active" :key="s.id" class="tag-chip" :class="{ active: form.subjectId === s.id }" @click="form.subjectId = form.subjectId === s.id ? '' : s.id">{{ s.name }}</button>

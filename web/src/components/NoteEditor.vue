@@ -40,6 +40,18 @@ const entryThreads = computed(() => {
   return list;
 });
 
+// thought 挂线索联动:选了对象,线索 chips 收窄为该对象下的线索(当前已选不在其中也保留)
+const attachThreads = computed(() => {
+  if (!form.subjectId) return eventStore.threads.slice(0, 8);
+  let list = eventStore.threads.filter((e) => (e.subjectIds || []).includes(form.subjectId)).slice(0, 12);
+  if (form.eventId && !list.some((e) => e.id === form.eventId)) {
+    const cur = eventStore.byId(form.eventId);
+    if (cur) list = [...list, cur];
+  }
+  return list;
+});
+const attachSubjectName = computed(() => subjectStore.nameOf(form.subjectId));
+
 // thought.source 的拼装/解析(「由X触发:说明」)与创建侧保持一致
 function parseSource(src) {
   const m = String(src || '').match(/^由(.+?)触发(?::([\s\S]*))?$/);
@@ -157,11 +169,11 @@ async function save() {
       <!-- 挂靠:与创建细节对齐(thought 可改挂对象/线索;entry 可改挂其他线索) -->
       <template v-if="!isEntry()">
         <div class="block-label row-between">
-          <span>挂到线索 · 哪件事</span>
+          <span>挂到线索 · 哪件事<template v-if="form.subjectId"><span class="muted"> · @{{ attachSubjectName }} 下的线索</span></template></span>
           <span class="guide-link" @click="showGuide = true">怎么选?</span>
         </div>
         <div class="chip-row">
-          <button v-for="e in eventStore.threads.slice(0, 8)" :key="e.id" class="tag-chip" :class="{ active: form.eventId === e.id }" @click="form.eventId = form.eventId === e.id ? '' : e.id">{{ e.title.slice(0, 12) }}</button>
+          <button v-for="e in attachThreads" :key="e.id" class="tag-chip" :class="{ active: form.eventId === e.id }" @click="form.eventId = form.eventId === e.id ? '' : e.id">{{ e.title.slice(0, 12) }}</button>
           <button class="tag-chip add-chip" @click="quickCreate('event')">+ 新建</button>
         </div>
         <div class="block-label">🎯 挂到对象 · 关于谁</div>
