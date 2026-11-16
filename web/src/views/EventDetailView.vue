@@ -12,6 +12,7 @@ import { useCatalogStore } from '../stores/catalog.js';
 import NoteComposer from '../components/NoteComposer.vue';
 import NoteEditor from '../components/NoteEditor.vue';
 import ThreadEditor from '../components/ThreadEditor.vue';
+import HandleStatusSheet from '../components/HandleStatusSheet.vue';
 import { kindMeta, parseTrigger } from '../lib/display.js';
 import { fmtDate, fmtTime } from '../lib/time.js';
 import { copyText } from '../lib/clipboard.js';
@@ -101,23 +102,22 @@ const limit = ref(PAGE_SIZE);
 const tlShown = computed(() => timelineFiltered.value.slice(0, limit.value));
 const hasMore = computed(() => timelineFiltered.value.length > limit.value);
 
-// 软收尾:完结/搁置/重新打开(纯手动标记,过程全保留)
-const STATE_META = {
-  open: { label: '进行中', type: 'primary' },
-  done: { label: '已完结', type: 'success' },
-  shelved: { label: '已搁置', type: 'warning' },
-};
+// 软收尾:完结/搁置/有问题/重新打开(纯手动标记,过程全保留;状态变更统一走标记处理弹层,可填结果说明)
+import { THREAD_STATE_META } from '../lib/domain.js';
 const stateOf = (e) => e?.threadState || 'open';
-async function setThreadState(state) {
-  await eventStore.setThreadState(eid.value, state);
-  showSuccessToast(state === 'done' ? '已标记完结' : state === 'shelved' ? '已搁置' : '已重新打开');
+// 标记处理:弹层选状态+填结果说明(完结/有问题且填了说明会自动落一条过程记录)
+const showHandle = ref(false);
+const presetState = ref('');
+function openHandle(state) {
+  presetState.value = state || '';
+  showHandle.value = true;
 }
 // 线索导出 Markdown:完整时间线(含触发源/小结)存成可读文档
 function exportMd() {
   const lines = [
     `# ${ev.value.title}`,
     '',
-    `- 开始: ${fmtDate(ev.value.startAt)} · 状态: ${STATE_META[stateOf(ev.value)].label} · ${timeline.value.length} 条记录`,
+    `- 开始: ${fmtDate(ev.value.startAt)} · 状态: ${THREAD_STATE_META[stateOf(ev.value)].label} · ${timeline.value.length} 条记录`,
   ];
   if (ev.value.subjectIds?.length) lines.push(`- 挂靠: ${ev.value.subjectIds.map((id) => '@ ' + subjectStore.nameOf(id)).join('、')}`);
   if (ev.value.fact) lines.push(`> ${ev.value.fact}`);
@@ -138,7 +138,7 @@ function exportMd() {
 function copyAll() {
   const lines = [
     `# ${ev.value.title}`,
-    `- 开始: ${fmtDate(ev.value.startAt)} · 状态: ${STATE_META[stateOf(ev.value)].label} · ${timeline.value.length} 条记录`,
+    `- 开始: ${fmtDate(ev.value.startAt)} · 状态: ${THREAD_STATE_META[stateOf(ev.value)].label} · ${timeline.value.length} 条记录`,
   ];
   if (ev.value.subjectIds?.length) lines.push(`- 挂靠: ${ev.value.subjectIds.map((id) => '@ ' + subjectStore.nameOf(id)).join('、')}`);
   if (ev.value.fact) lines.push(`> ${ev.value.fact}`);
@@ -179,7 +179,7 @@ async function removeThread() {
 
     <div class="card">
       <div class="meta-row">
-        <van-tag :type="STATE_META[stateOf(ev)].type" plain round size="medium">{{ STATE_META[stateOf(ev)].label }}</van-tag>
+        <van-tag :type="THREAD_STATE_META[stateOf(ev)].type" plain round size="medium">{{ THREAD_STATE_META[stateOf(ev)].label }}</van-tag>
         <span class="muted">开始于 {{ fmtDate(ev.startAt) }}</span>
         <span class="muted">· {{ timeline.length }} 条记录</span>
       </div>
@@ -195,11 +195,15 @@ async function removeThread() {
       </div>
       <div class="btn-row" style="margin-top: 8px">
         <template v-if="stateOf(ev) === 'open'">
-          <van-button plain size="small" round type="success" @click="setThreadState('done')">完结</van-button>
-          <van-button plain size="small" round type="warning" @click="setThreadState('shelved')">搁置</van-button>
+          <van-button plain size="small" round type="success" @click="openHandle('done')">完结</van-button>
+          <van-button plain size="small" round type="warning" @click="openHandle('shelved')">搁置</van-button>
+          <van-button plain size="small" round type="danger" @click="openHandle('issue')">有问题</van-button>
         </template>
-        <van-button v-else plain size="small" round type="primary" @click="setThreadState('open')">重新打开</van-button>
-        <span class="muted" style="font-size: 11px; align-self: center">完结/搁置只是标记,随时可改,过程全保留</span>
+        <template v-else>
+          <van-button plain size="small" round type="primary" @click="openHandle('open')">重新打开</van-button>
+          <van-button plain size="small" round @click="openHandle(stateOf(ev))">改结果</van-button>
+        </template>
+        <span class="muted" style="font-size: 11px; align-self: center">完结/搁置/有问题都是标记,随时可改,过程全保留;填了说明会自动记进时间线</span>
       </div>
       <div class="hint-line hint-brand"><b style="color: #8f9bb3">记一笔</b> = 过程中的一个点(新进展/新信息/新想法) · <b style="color: var(--brand)">写小结</b> = 阶段性回顾,想到哪写到哪,随时可再补</div>
     </div>
@@ -243,6 +247,7 @@ async function removeThread() {
     <NoteComposer v-model:show="showSummary" :event-id="eid" summary-mode />
     <NoteEditor v-model:show="showEditor" :thought="editItem?.type === 't' ? editItem.raw : null" :entry="editItem?.type === 'e' ? editItem.raw : null" @saved="editItem = null" />
     <ThreadEditor v-model:show="showThreadEditor" :thread="ev" />
+    <HandleStatusSheet v-model:show="showHandle" type="event" :target="ev" :preset="presetState" @saved="presetState = ''" />
 
     <van-action-sheet
       v-model:show="showActions"

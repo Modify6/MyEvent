@@ -4,7 +4,7 @@ import { defineStore } from 'pinia';
 import { putRow, softDelete, getAllEvents, getAllEventEntries, onChange } from '../db/repo.js';
 import { uuid } from '../lib/util.js';
 import { logInfo } from '../lib/logger.js';
-import { TRIGGER_KINDS } from '../lib/domain.js';
+import { TRIGGER_KINDS, THREAD_STATES, THREAD_STATE_META } from '../lib/domain.js';
 
 export const useEventStore = defineStore('event', {
   state: () => ({ events: [], entries: [], loaded: false }),
@@ -53,6 +53,8 @@ export const useEventStore = defineStore('event', {
         createdAt: Date.now(),
       };
       await putRow('events', ev);
+      // 同步进内存状态:onChange→load 是异步的,紧随其后的读写(如改状态)不等它
+      this.events.push(ev);
       logInfo('event', `新建线索「${ev.title}」`);
       return ev;
     },
@@ -130,12 +132,33 @@ export const useEventStore = defineStore('event', {
     async removeEntry(id) {
       await softDelete('eventEntries', id);
     },
-    // 线索软收尾:完结/搁置/重新打开 —— 纯手动,过程全保留,不产生任何提醒
-    async setThreadState(id, state) {
+    // 线索状态流转:进行中/已完结/已搁置/有问题(0.8.0) —— 纯手动,过程全保留
+    // 状态变更写 statusHistory 留痕;完结/有问题时填了说明,自动落一条过程记录(处理结果进过程时间线)
+    async setThreadState(id, state, note = '') {
       const ev = this.byId(id);
-      if (!ev || !['open', 'done', 'shelved'].includes(state)) return;
-      await putRow('events', { ...ev, threadState: state });
-      logInfo('event', `线索状态 → ${state === 'done' ? '已完结' : state === 'shelved' ? '已搁置' : '进行中'}`);
+      if (!ev || !THREAD_STATES.includes(state)) return;
+      const text = String(note || '').trim();
+      const from = ev.threadState || 'open';
+      const next = {
+        ...ev,
+        threadState: state,
+        handleNote: text || (state === 'open' ? '' : ev.handleNote || ''),
+        statusHistory: [...(ev.statusHistory || []), { at: Date.now(), from, to: state, note: text }],
+      };
+      await putRow('events', next);
+      // 同步进内存状态:onChange→load 是异步的,紧随其后的读写不等它(同 addEntry 的取舍)
+      const idx = this.events.findIndex((x) => x.id === id);
+      if (idx >= 0) this.events[idx] = next;
+      const label = THREAD_STATE_META[state]?.label || state;
+      logInfo('event', `线索状态 → ${label}${text ? `:${text.slice(0, 20)}` : ''}`);
+      if (text && ['done', 'issue'].includes(state)) {
+        await this.addEntry({
+          eventId: id,
+          content: `状态 → ${label}${text ? ':' + text : ''}`,
+          kind: 'record',
+        });
+      }
+      return next;
     },
   },
 });

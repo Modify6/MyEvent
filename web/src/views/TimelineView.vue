@@ -13,8 +13,10 @@ import QuickCreate from '../components/QuickCreate.vue';
 import AttachGuide from '../components/AttachGuide.vue';
 import ConvertToThread from '../components/ConvertToThread.vue';
 import SyncDot from '../components/SyncDot.vue';
+import StatusTag from '../components/StatusTag.vue';
+import HandleStatusSheet from '../components/HandleStatusSheet.vue';
 import { copyText } from '../lib/clipboard.js';
-import { THOUGHT_KINDS, TRIGGER_KINDS } from '../lib/domain.js';
+import { THOUGHT_KINDS, TRIGGER_KINDS, HANDLE_STATUSES, HANDLE_STATUS_META } from '../lib/domain.js';
 import { getLastAttach, setLastAttach } from '../auth/local.js';
 import { kindChipStyle, kindMeta, trigChipStyle, TRIGGER_ICON, parseTrigger } from '../lib/display.js';
 import { fmtTime } from '../lib/time.js';
@@ -64,10 +66,11 @@ async function quickSend() {
   }
 }
 
-// —— 筛选条:类型 / 对象 / 线索(与搜索互补,流内快速聚焦) ——
+// —— 筛选条:类型 / 对象 / 线索 / 处理状态(与搜索互补,流内快速聚焦) ——
 const fType = ref('');
 const fSubject = ref('');
 const fThread = ref('');
+const fHandle = ref('');
 const typeOptions = computed(() => [
   { text: '全部类型', value: '' },
   ...THOUGHT_KINDS.map((k) => ({ text: k, value: k })),
@@ -76,7 +79,11 @@ const typeOptions = computed(() => [
 ]);
 const subjectOptions = computed(() => [{ text: '全部对象', value: '' }, ...subjectStore.active.map((s) => ({ text: s.name, value: s.id }))]);
 const threadOptions = computed(() => [{ text: '全部线索', value: '' }, ...eventStore.threads.map((e) => ({ text: e.title.slice(0, 12), value: e.id }))]);
-watch([fType, fSubject, fThread], () => { limit.value = PAGE_SIZE; });
+const handleOptions = computed(() => [
+  { text: '处理状态', value: '' },
+  ...HANDLE_STATUSES.map((s) => ({ text: HANDLE_STATUS_META[s].label, value: s })),
+]);
+watch([fType, fSubject, fThread, fHandle], () => { limit.value = PAGE_SIZE; });
 
 // —— 统一记录时间线:thoughts(独立/挂对象/挂线索的随手记) + eventEntries(线索过程记录) ——
 const feed = computed(() => {
@@ -86,6 +93,7 @@ const feed = computed(() => {
       key: 't:' + t.id, type: 't', raw: t, kind: t.kind, content: t.content, at: t.at,
       trigger: t.source || '', summary: false, edited: (t.edits || []).length > 0,
       subjectId: t.subjectId || '', eventId: t.relatedEventId || '',
+      handleStatus: t.handleStatus || 'pending', handleNote: t.handleNote || '',
     });
   }
   for (const en of eventStore.entries) {
@@ -101,6 +109,7 @@ const feed = computed(() => {
   if (fType.value) arr = arr.filter((it) => it.kind === fType.value);
   if (fSubject.value) arr = arr.filter((it) => it.subjectId === fSubject.value);
   if (fThread.value) arr = arr.filter((it) => it.eventId === fThread.value);
+  if (fHandle.value) arr = arr.filter((it) => it.type === 't' && it.handleStatus === fHandle.value);
   return arr;
 });
 
@@ -185,10 +194,13 @@ const showConvert = ref(false);
 function startConvert() {
   showConvert.value = true;
 }
-// 操作菜单按记录类型动态生成:想法多一个「转为线索」
+// 操作菜单按记录类型动态生成:想法多「转为线索」「标记处理」
 const sheetActions = computed(() => {
   const a = [{ name: '编辑', key: 'edit' }];
-  if (editItem.value?.type === 't') a.splice(1, 0, { name: '转为线索', key: 'convert' });
+  if (editItem.value?.type === 't') {
+    a.splice(1, 0, { name: '转为线索', key: 'convert' });
+    a.splice(2, 0, { name: '标记处理', key: 'handle' });
+  }
   a.push({ name: '删除', key: 'remove', color: 'var(--danger)' });
   return a;
 });
@@ -196,7 +208,17 @@ function onSheetSelect(a) {
   if (!editItem.value) return;
   if (a.key === 'edit') openEdit(editItem.value);
   else if (a.key === 'convert') startConvert();
+  else if (a.key === 'handle') openHandle(editItem.value);
   else if (a.key === 'remove') removeItem(editItem.value);
+}
+
+// 标记处理:点状态 tag 或长按菜单,打开共用弹层
+const showHandle = ref(false);
+const handleItem = ref(null);
+function openHandle(it) {
+  if (it.type !== 't') return;
+  handleItem.value = it;
+  showHandle.value = true;
 }
 </script>
 
@@ -261,10 +283,11 @@ function onSheetSelect(a) {
       </template>
     </div>
 
-    <van-dropdown-menu v-if="feed.length || fType || fSubject || fThread">
+    <van-dropdown-menu v-if="feed.length || fType || fSubject || fThread || fHandle">
       <van-dropdown-item v-model="fType" :options="typeOptions" title="类型" />
       <van-dropdown-item v-model="fSubject" :options="subjectOptions" title="对象" />
       <van-dropdown-item v-model="fThread" :options="threadOptions" title="线索" />
+      <van-dropdown-item v-model="fHandle" :options="handleOptions" title="处理" />
     </van-dropdown-menu>
 
     <!-- 记录流 -->
@@ -274,7 +297,7 @@ function onSheetSelect(a) {
         <div v-for="it in list" :key="it.key">
           <div
             class="feed-item"
-            :class="{ summary: it.summary }"
+            :class="{ summary: it.summary, handled: it.type === 't' && it.handleStatus === 'done', issue: it.type === 't' && it.handleStatus === 'issue' }"
             @click="onItemClick(it)"
             @touchstart.passive="startPress(it)"
             @touchmove.passive="cancelPress"
@@ -284,6 +307,7 @@ function onSheetSelect(a) {
             <div class="feed-kind" :style="kindStyle(it.kind)">{{ kindIcon(it.kind) }} {{ it.kind }}</div>
             <div class="row-main">
               <div class="feed-text">{{ it.content }}</div>
+              <div v-if="it.type === 't' && it.handleStatus !== 'pending' && it.handleNote" class="handle-note">{{ HANDLE_STATUS_META[it.handleStatus].label }}:{{ it.handleNote }}</div>
               <div class="muted">
                 {{ fmtTime(it.at) }}
                 <template v-if="it.edited"> · ✎ 已编辑</template>
@@ -292,6 +316,9 @@ function onSheetSelect(a) {
               <div class="feed-chips">
                 <span v-if="it.eventId" class="chip chip-thread" @click.stop="router.push(`/events/${it.eventId}`)"># {{ eventTitle(it.eventId) }}</span>
                 <span v-if="it.subjectId" class="chip chip-subject" @click.stop="router.push(`/subjects/${it.subjectId}`)">@ {{ subjectName(it.subjectId) }}</span>
+                <span v-if="it.type === 't'" class="handle-tag" title="标记处理" @click.stop="openHandle(it)">
+                  <StatusTag kind="handle" :status="it.handleStatus" />
+                </span>
               </div>
             </div>
             <van-icon name="records" class="row-copy" title="复制这条" @click.stop="copyRow(it)" />
@@ -310,6 +337,7 @@ function onSheetSelect(a) {
 
     <QuickCreate v-model:show="showQuickCreate" :type="quickCreateType" @created="onQuickCreated" />
     <AttachGuide v-model:show="showGuide" />
+    <HandleStatusSheet v-model:show="showHandle" type="thought" :target="handleItem?.raw || null" @saved="handleItem = null" />
 
     <van-action-sheet
       v-model:show="showActions"
@@ -346,6 +374,11 @@ function onSheetSelect(a) {
 .row-main { flex: 1; min-width: 0; }
 .row-copy { color: var(--text-3); font-size: 15px; margin-top: 3px; flex: none; cursor: pointer; }
 .feed-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+.feed-item.handled .feed-text { color: var(--text-3); }
+.feed-item.issue .feed-text { color: var(--text-2); }
+.handle-note { font-size: 12px; margin-top: 3px; color: var(--text-2); background: var(--card-2); border-radius: 6px; padding: 4px 8px; white-space: pre-wrap; word-break: break-word; }
+.feed-item.issue .handle-note { color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
+.handle-tag { cursor: pointer; display: inline-flex; }
 .feed-chips { margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; }
 .feed-chips .chip { cursor: pointer; }
 .chip-thread { color: var(--brand); background: color-mix(in srgb, var(--brand) 12%, transparent); }

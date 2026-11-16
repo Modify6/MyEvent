@@ -13,6 +13,7 @@ import FolderManage from '../components/FolderManage.vue';
 import MoveToFolder from '../components/MoveToFolder.vue';
 import { fmtDate } from '../lib/time.js';
 import { avatarColor } from '../lib/display.js';
+import { THREAD_STATE_META } from '../lib/domain.js';
 
 const router = useRouter();
 const store = useEventStore();
@@ -22,17 +23,12 @@ const folderStore = useFolderStore();
 const showNew = ref(false);
 const showManage = ref(false);
 
-// 软收尾:默认只看进行中;完结/搁置的线索沉到对应过滤里,过程全保留
-const STATE_META = {
-  open: { label: '进行中', type: 'primary' },
-  done: { label: '已完结', type: 'success' },
-  shelved: { label: '已搁置', type: 'warning' },
-};
+// 软收尾:默认只看进行中;完结/搁置/有问题的线索沉到对应过滤里,过程全保留
 const stateOf = (e) => e.threadState || 'open';
 const stateFilter = ref('open');
 const counts = computed(() => {
-  const c = { open: 0, done: 0, shelved: 0 };
-  for (const e of store.threads) c[stateOf(e)]++;
+  const c = { open: 0, done: 0, shelved: 0, issue: 0 };
+  for (const e of store.threads) c[stateOf(e)] = (c[stateOf(e)] || 0) + 1;
   return c;
 });
 
@@ -132,6 +128,7 @@ const showFolderManage = ref(false);
       <button :class="{ active: stateFilter === 'open' }" @click="stateFilter = 'open'">进行中 {{ counts.open }}</button>
       <button :class="{ active: stateFilter === 'done' }" @click="stateFilter = 'done'">已完结 {{ counts.done }}</button>
       <button :class="{ active: stateFilter === 'shelved' }" @click="stateFilter = 'shelved'">已搁置 {{ counts.shelved }}</button>
+      <button :class="{ active: stateFilter === 'issue' }" @click="stateFilter = 'issue'">有问题 {{ counts.issue || 0 }}</button>
       <button :class="{ active: stateFilter === 'all' }" @click="stateFilter = 'all'">全部 {{ store.threads.length }}</button>
     </div>
 
@@ -163,7 +160,7 @@ const showFolderManage = ref(false);
           <div v-if="e.fact" class="muted ev-note">{{ e.fact }}</div>
         </div>
         <div class="ev-side">
-          <van-tag v-if="stateFilter === 'all'" :type="STATE_META[stateOf(e)].type" plain round size="medium">{{ STATE_META[stateOf(e)].label }}</van-tag>
+          <van-tag v-if="stateFilter === 'all'" :type="THREAD_STATE_META[stateOf(e)].type" plain round size="medium">{{ THREAD_STATE_META[stateOf(e)].label }}</van-tag>
           <van-icon name="arrow" color="var(--text-3)" />
         </div>
       </div>

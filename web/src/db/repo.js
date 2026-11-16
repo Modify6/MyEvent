@@ -82,12 +82,13 @@ const JSON_DEFAULTS = {
   refEvents: [],
   refPredictions: [],
   edits: [],
+  statusHistory: [],
 };
 
 export const JSON_COLS = {
-  events: ['subjectIds', 'review'],
+  events: ['subjectIds', 'review', 'statusHistory'],
   subjects: ['tags', 'topReasons'],
-  thoughts: ['edits'],
+  thoughts: ['edits', 'statusHistory'],
   predictions: ['basis', 'criteria', 'result', 'lockSnapshot'],
   rules: ['refEvents', 'refPredictions'],
   eventEntries: ['edits'],

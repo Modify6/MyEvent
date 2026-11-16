@@ -1,10 +1,10 @@
 <script setup>
-// 状态标签：事件复盘状态 / 预判生命周期 / 规则有效性 的统一彩色小签
+// 状态标签：事件复盘状态 / 预判生命周期 / 规则有效性 / 处理状态 的统一彩色小签
 import { computed } from 'vue';
-import { EVENT_STATUS_LABELS, PREDICTION_STATUS_LABELS, predictionEffectiveStatus } from '../lib/domain.js';
+import { EVENT_STATUS_LABELS, PREDICTION_STATUS_LABELS, predictionEffectiveStatus, HANDLE_STATUS_META } from '../lib/domain.js';
 
 const props = defineProps({
-  kind: { type: String, required: true }, // event | prediction | rule
+  kind: { type: String, required: true }, // event | prediction | rule | handle
   status: { type: String, default: '' },
   prediction: { type: Object, default: null }, // 预判传对象以计算有效状态（过窗 → 待验证）
 });
@@ -34,6 +34,10 @@ const LABEL = {
 };
 
 const info = computed(() => {
+  if (props.kind === 'handle') {
+    const m = HANDLE_STATUS_META[props.status] || HANDLE_STATUS_META.pending;
+    return { label: m.label, color: m.type };
+  }
   if (props.kind === 'prediction' && props.prediction) {
     const st = predictionEffectiveStatus(props.prediction);
     return { label: LABEL[st] || st, color: COLOR[st] || 'default' };

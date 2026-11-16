@@ -4,7 +4,7 @@ import { defineStore } from 'pinia';
 import { putRow, softDelete, getAllThoughts, onChange } from '../db/repo.js';
 import { uuid } from '../lib/util.js';
 import { logInfo } from '../lib/logger.js';
-import { THOUGHT_KINDS, clampPct } from '../lib/domain.js';
+import { THOUGHT_KINDS, HANDLE_STATUSES, clampPct } from '../lib/domain.js';
 
 export const useThoughtStore = defineStore('thought', {
   state: () => ({ thoughts: [], loaded: false }),
@@ -40,9 +40,12 @@ export const useThoughtStore = defineStore('thought', {
         parentThoughtId: null,
         relation: '',
         state: 'archived',
+        handleStatus: 'pending',
         createdAt: Date.now(),
       };
       await putRow('thoughts', row);
+      // 同步进内存状态:onChange→load 是异步的,紧随其后的读写(如标记处理)不等它
+      this.thoughts.push(row);
       logInfo('thought', `随手记一条(${row.kind})`);
       return row;
     },
@@ -64,6 +67,26 @@ export const useThoughtStore = defineStore('thought', {
       };
       await putRow('thoughts', next);
       logInfo('thought', '修改一条记录(已留痕)');
+      return next;
+    },
+    // 标记处理状态:未处理/已处理/有问题 + 结果说明;每次变更写 statusHistory(改变要有记录)
+    async setHandle(id, status, note = '') {
+      const t = this.byId(id);
+      if (!t) throw new Error('记录不存在');
+      if (!HANDLE_STATUSES.includes(status)) throw new Error('未知的处理状态');
+      const text = String(note || '').trim();
+      const from = t.handleStatus || 'pending';
+      const next = {
+        ...t,
+        handleStatus: status,
+        handleNote: text,
+        handledAt: status === 'pending' ? null : Date.now(),
+        statusHistory: [...(t.statusHistory || []), { at: Date.now(), from, to: status, note: text }],
+      };
+      await putRow('thoughts', next);
+      const i = this.thoughts.findIndex((x) => x.id === id);
+      if (i >= 0) this.thoughts[i] = next;
+      logInfo('thought', `处理状态 → ${status}${text ? `:${text.slice(0, 20)}` : ''}`);
       return next;
     },
     async remove(id) {

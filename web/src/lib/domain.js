@@ -23,6 +23,24 @@ export const PREDICTION_STATUS_LABELS = {
 // 有明确结果的终态（校准统计只计这些）
 export const PREDICTION_VERIFIED = ['hit', 'partial', 'miss'];
 
+// —— 处理状态(0.8.0:记录与线索通用) ——
+// 通用三态不特化场景:未处理 = 还没着落;已处理 = 有了结果(结果说明写 handleNote);有问题 = 处理过但需再处理
+export const HANDLE_STATUSES = ['pending', 'done', 'issue'];
+export const HANDLE_STATUS_META = {
+  pending: { label: '未处理', type: 'primary' },
+  done: { label: '已处理', type: 'success' },
+  issue: { label: '有问题', type: 'danger' },
+};
+
+// —— 线索状态(原 EventsView/EventDetailView 各自的 STATE_META 集中到此处) ——
+export const THREAD_STATES = ['open', 'done', 'shelved', 'issue'];
+export const THREAD_STATE_META = {
+  open: { label: '进行中', type: 'primary' },
+  done: { label: '已完结', type: 'success' },
+  shelved: { label: '已搁置', type: 'warning' },
+  issue: { label: '有问题', type: 'danger' },
+};
+
 // 进行中核心预判上限（防跟踪过载，设计方案 §7）
 export const MAX_ACTIVE_PREDICTIONS = 15;
 

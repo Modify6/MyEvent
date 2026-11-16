@@ -10,7 +10,7 @@ export const TABLES = {
   categories: ['id', 'name', 'color', 'sort', 'createdAt', 'updatedAt', 'deleted'],
   events: [
     'id', 'title', 'categoryId', 'subjectIds', 'fact', 'status', 'threadState', 'review', 'location', 'note',
-    'startAt', 'endAt', 'reviewedAt', 'ruleId', 'createdAt', 'updatedAt', 'deleted',
+    'startAt', 'endAt', 'reviewedAt', 'ruleId', 'handleNote', 'statusHistory', 'createdAt', 'updatedAt', 'deleted',
   ],
   subjects: [
     'id', 'name', 'type', 'tags', 'currentView', 'currentConfidence', 'topReasons', 'biggestRisk',
@@ -18,7 +18,8 @@ export const TABLES = {
   ],
   thoughts: [
     'id', 'subjectId', 'content', 'kind', 'at', 'source', 'confidence', 'basis', 'counter',
-    'relatedEventId', 'parentThoughtId', 'relation', 'state', 'edits', 'createdAt', 'updatedAt', 'deleted',
+    'relatedEventId', 'parentThoughtId', 'relation', 'state', 'edits', 'handleStatus', 'handleNote',
+    'handledAt', 'statusHistory', 'createdAt', 'updatedAt', 'deleted',
   ],
   predictions: [
     'id', 'subjectId', 'content', 'kind', 'madeAt', 'windowStart', 'windowEnd', 'origConfidence',
@@ -39,13 +40,13 @@ const INT_COLS = new Set([
   'sort', 'createdAt', 'updatedAt', 'deleted', 'startAt', 'endAt', 'reviewedAt',
   'currentConfidence', 'nextReviewAt', 'at', 'confidence',
   'madeAt', 'windowStart', 'windowEnd', 'origConfidence', 'lockedAt', 'verifiedAt',
-  'verifyCount', 'lastVerifiedAt',
+  'verifyCount', 'lastVerifiedAt', 'handledAt',
 ]);
 
 // 以 JSON 字符串存储的数组/对象列（与 web/src/db/repo.js JSON_COLS 对应，白名单交集为准）
 const JSON_COLS = new Set([
   'subjectIds', 'review', 'tags', 'topReasons',
-  'basis', 'criteria', 'result', 'lockSnapshot', 'refEvents', 'refPredictions', 'edits',
+  'basis', 'criteria', 'result', 'lockSnapshot', 'refEvents', 'refPredictions', 'edits', 'statusHistory',
 ]);
 
 // 业务表（TABLES 全集）；建表列后缀（核心列 NOT NULL，业务列宽松以便 ALTER 补列语义一致）
