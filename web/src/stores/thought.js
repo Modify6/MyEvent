@@ -4,7 +4,7 @@ import { defineStore } from 'pinia';
 import { putRow, softDelete, getAllThoughts, onChange } from '../db/repo.js';
 import { uuid } from '../lib/util.js';
 import { logInfo } from '../lib/logger.js';
-import { THOUGHT_KINDS, HANDLE_STATUSES, clampPct } from '../lib/domain.js';
+import { HANDLE_STATUSES, clampPct } from '../lib/domain.js';
 
 export const useThoughtStore = defineStore('thought', {
   state: () => ({ thoughts: [], loaded: false }),
@@ -31,7 +31,8 @@ export const useThoughtStore = defineStore('thought', {
         subjectId: subjectId || '',
         relatedEventId: relatedEventId || '',
         content: text,
-        kind: THOUGHT_KINDS.includes(kind) ? kind : '想法',
+        // 0.9.0:类型不再限内置白名单——自定义词表(vocab)的任意非空类型都入库,旧数据原样展示
+        kind: String(kind || '').trim() || '想法',
         at: at || Date.now(),
         source: source || '',
         confidence: clampPct(confidence),
@@ -58,7 +59,7 @@ export const useThoughtStore = defineStore('thought', {
       const next = {
         ...t,
         content: text,
-        kind: kind ? (THOUGHT_KINDS.includes(kind) ? kind : t.kind) : t.kind,
+        kind: kind ? String(kind).trim() || t.kind : t.kind,
         at: at ?? t.at,
         subjectId: subjectId !== undefined ? subjectId : t.subjectId,
         relatedEventId: relatedEventId !== undefined ? relatedEventId : t.relatedEventId,
@@ -66,6 +67,8 @@ export const useThoughtStore = defineStore('thought', {
         edits: [...(t.edits || []), { at: Date.now(), content: t.content, kind: t.kind, source: t.source || '' }],
       };
       await putRow('thoughts', next);
+      const i = this.thoughts.findIndex((x) => x.id === id);
+      if (i >= 0) this.thoughts[i] = next;
       logInfo('thought', '修改一条记录(已留痕)');
       return next;
     },

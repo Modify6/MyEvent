@@ -5,8 +5,11 @@ import { showFailToast, showSuccessToast } from 'vant';
 import { useEventStore } from '../stores/event.js';
 import { useSubjectStore } from '../stores/subject.js';
 import { useCatalogStore } from '../stores/catalog.js';
-import { TRIGGER_KINDS } from '../lib/domain.js';
-import { trigChipStyle, TRIGGER_ICON } from '../lib/display.js';
+
+import { trigChipStyle } from '../lib/display.js';
+import { useVocabStore } from '../stores/vocab.js';
+import VocabQuickCreate from './VocabQuickCreate.vue';
+import VocabManage from './VocabManage.vue';
 import { toLocalInput, fromLocalInput } from '../lib/time.js';
 import { useFolderStore } from '../stores/folder.js';
 import FolderQuickCreate from './FolderQuickCreate.vue';
@@ -22,6 +25,7 @@ const eventStore = useEventStore();
 const subjectStore = useSubjectStore();
 const catalog = useCatalogStore();
 const folderStore = useFolderStore();
+const vocabStore = useVocabStore();
 
 const form = reactive({ title: '', startAt: '', fact: '', categoryId: '', subjectIds: [], triggerNote: '', folderId: '' });
 const more = ref(false);
@@ -29,6 +33,8 @@ const triggerKind = ref('');
 
 // 文件夹就地快速新建:建好即选中
 const showFolderCreate = ref(false);
+const showTriggerCreate = ref(false);
+const showVocabManage = ref(false);
 function onFolderCreated(id) {
   form.folderId = id;
 }
@@ -97,9 +103,10 @@ async function save() {
       <van-field v-model="form.title" placeholder="发生了什么?一句话标题 *" />
       <van-field v-model="form.fact" type="textarea" rows="2" autosize placeholder="一句话事实:只写客观发生了什么(选填)" />
 
-      <div class="block-label">📌 触发源 —— 这件事由什么引发?(选填,记下出发原因)</div>
+      <div class="block-label row-between"><span>📌 触发源 —— 这件事由什么引发?(选填,记下出发原因)</span><span class="manage-link" @click="showVocabManage = true">管理</span></div>
       <div class="chip-row">
-        <button v-for="k in TRIGGER_KINDS" :key="k" class="tag-chip" :class="{ active: triggerKind === k }" :style="trigChipStyle(k, triggerKind === k)" @click="triggerKind = triggerKind === k ? '' : k">{{ TRIGGER_ICON[k] }} {{ k }}</button>
+        <button v-for="k in vocabStore.triggers" :key="k" class="tag-chip" :class="{ active: triggerKind === k }" :style="trigChipStyle(k, triggerKind === k)" @click="triggerKind = triggerKind === k ? '' : k">{{ vocabStore.triggerIconOf(k) }} {{ k }}</button>
+        <button class="tag-chip add-chip" @click="showTriggerCreate = true">+ 自定义</button>
       </div>
       <van-field v-model="form.triggerNote" type="textarea" rows="1" autosize placeholder="触发说明(选填),如:看了XX视频 / 和XX聊天时提到" />
 
@@ -140,6 +147,8 @@ async function save() {
 
       <van-button type="primary" round block style="margin-top: 14px" @click="save">创建线索</van-button>
       <FolderQuickCreate v-model:show="showFolderCreate" scope="event" @created="onFolderCreated" />
+      <VocabQuickCreate v-model:show="showTriggerCreate" type="trigger" @created="(row) => (triggerKind = row.name)" />
+      <VocabManage v-model:show="showVocabManage" scope="trigger" />
     </div>
   </van-popup>
 </template>
@@ -148,6 +157,9 @@ async function save() {
 .form-wrap { padding: 18px 14px 6px; display: flex; flex-direction: column; }
 .pop-head { display: flex; align-items: center; justify-content: space-between; font-size: 16px; font-weight: 700; margin-bottom: 10px; }
 .block-label { font-size: 12px; color: var(--text-3); margin: 12px 2px 6px; }
+.row-between { display: flex; align-items: center; justify-content: space-between; }
+.manage-link { color: var(--brand); cursor: pointer; font-size: 12px; }
+.tag-chip.add-chip { border-style: dashed; color: var(--text-3); }
 .row-center { display: flex; justify-content: center; }
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 2px; }
 .tag-chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 13px; font-size: 12px; color: var(--text-2); }

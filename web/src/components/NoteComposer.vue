@@ -5,9 +5,11 @@ import { reactive, ref, watch } from 'vue';
 import { showFailToast, showSuccessToast } from 'vant';
 import { useEventStore } from '../stores/event.js';
 import { useThoughtStore } from '../stores/thought.js';
-import { TRIGGER_KINDS, THOUGHT_KINDS } from '../lib/domain.js';
-import { kindChipStyle, kindMeta, trigChipStyle, TRIGGER_ICON } from '../lib/display.js';
+import { useVocabStore } from '../stores/vocab.js';
+import { kindChipStyle, trigChipStyle } from '../lib/display.js';
 import { toLocalInput, fromLocalInput } from '../lib/time.js';
+import VocabQuickCreate from './VocabQuickCreate.vue';
+import VocabManage from './VocabManage.vue';
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -19,10 +21,20 @@ const emit = defineEmits(['update:show', 'saved']);
 
 const eventStore = useEventStore();
 const thoughtStore = useThoughtStore();
+const vocabStore = useVocabStore();
 const kind = ref('想法');
 const triggerKind = ref('');
 const more = ref(false);
 const form = reactive({ content: '', triggerNote: '', at: '' });
+// 自定义类型/触发源:就地新建 + 管理
+const showKindCreate = ref(false);
+const showTriggerCreate = ref(false);
+const showManage = ref(false);
+const manageScope = ref('kind');
+function onVocabCreated(row) {
+  if (row.type === 'kind') kind.value = row.name;
+  else triggerKind.value = row.name;
+}
 
 watch(
   () => props.show,
@@ -92,15 +104,23 @@ async function save() {
 
       <template v-if="!summaryMode">
         <template v-if="!eventId">
-          <div class="block-label">🏷 类型 · 这是一条什么性质的记录</div>
+          <div class="block-label row-between">
+            <span>🏷 类型 · 这是一条什么性质的记录</span>
+            <span class="manage-link" @click="manageScope = 'kind'; showManage = true">管理</span>
+          </div>
           <div class="chip-row">
-            <button v-for="k in THOUGHT_KINDS" :key="k" class="tag-chip" :class="{ active: kind === k }" :style="kindChipStyle(k, kind === k)" @click="kind = k">{{ kindMeta(k).icon }} {{ k }}</button>
+            <button v-for="k in vocabStore.kinds" :key="k" class="tag-chip" :class="{ active: kind === k }" :style="kindChipStyle(k, kind === k)" @click="kind = k">{{ vocabStore.kindMetaOf(k).icon }} {{ k }}</button>
+            <button class="tag-chip add-chip" @click="showKindCreate = true">+ 自定义</button>
           </div>
         </template>
 
-        <div class="block-label">📌 触发源 · 由什么引发(选填)</div>
+        <div class="block-label row-between">
+          <span>📌 触发源 · 由什么引发(选填)</span>
+          <span class="manage-link" @click="manageScope = 'trigger'; showManage = true">管理</span>
+        </div>
         <div class="chip-row">
-          <button v-for="k in TRIGGER_KINDS" :key="k" class="tag-chip" :class="{ active: triggerKind === k }" :style="trigChipStyle(k, triggerKind === k)" @click="triggerKind = triggerKind === k ? '' : k">{{ TRIGGER_ICON[k] }} {{ k }}</button>
+          <button v-for="k in vocabStore.triggers" :key="k" class="tag-chip" :class="{ active: triggerKind === k }" :style="trigChipStyle(k, triggerKind === k)" @click="triggerKind = triggerKind === k ? '' : k">{{ vocabStore.triggerIconOf(k) }} {{ k }}</button>
+          <button class="tag-chip add-chip" @click="showTriggerCreate = true">+ 自定义</button>
         </div>
         <van-field v-model="form.triggerNote" type="textarea" rows="1" autosize placeholder="触发说明(选填),如:看了XX视频 / 和XX聊天" />
       </template>
@@ -113,6 +133,9 @@ async function save() {
       </div>
 
       <van-button type="primary" round block style="margin-top: 14px" @click="save">{{ summaryMode ? '记下小结' : '记一笔' }}</van-button>
+      <VocabQuickCreate v-model:show="showKindCreate" type="kind" @created="onVocabCreated" />
+      <VocabQuickCreate v-model:show="showTriggerCreate" type="trigger" @created="onVocabCreated" />
+      <VocabManage v-model:show="showManage" :scope="manageScope" />
     </div>
   </van-popup>
 </template>
@@ -121,6 +144,9 @@ async function save() {
 .form-wrap { padding: 18px 14px 6px; display: flex; flex-direction: column; }
 .pop-head { display: flex; align-items: center; justify-content: space-between; font-size: 16px; font-weight: 700; margin-bottom: 10px; }
 .block-label { font-size: 12px; color: var(--text-3); margin: 12px 2px 6px; }
+.row-between { display: flex; align-items: center; justify-content: space-between; }
+.manage-link { color: var(--brand); cursor: pointer; font-size: 12px; }
+.tag-chip.add-chip { border-style: dashed; color: var(--text-3); }
 .row-center { display: flex; justify-content: center; }
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 2px; }
 .tag-chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 13px; font-size: 12px; color: var(--text-2); }

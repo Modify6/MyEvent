@@ -8,23 +8,27 @@ import dayjs from 'dayjs';
 import { useThoughtStore } from '../stores/thought.js';
 import { useEventStore } from '../stores/event.js';
 import { useSubjectStore } from '../stores/subject.js';
+import { useVocabStore } from '../stores/vocab.js';
 import NoteEditor from '../components/NoteEditor.vue';
 import QuickCreate from '../components/QuickCreate.vue';
 import AttachGuide from '../components/AttachGuide.vue';
 import ConvertToThread from '../components/ConvertToThread.vue';
 import SyncDot from '../components/SyncDot.vue';
+import VocabQuickCreate from '../components/VocabQuickCreate.vue';
+import VocabManage from '../components/VocabManage.vue';
 import StatusTag from '../components/StatusTag.vue';
 import HandleStatusSheet from '../components/HandleStatusSheet.vue';
 import { copyText } from '../lib/clipboard.js';
-import { THOUGHT_KINDS, TRIGGER_KINDS, HANDLE_STATUSES, HANDLE_STATUS_META } from '../lib/domain.js';
+import { HANDLE_STATUSES, HANDLE_STATUS_META } from '../lib/domain.js';
 import { getLastAttach, setLastAttach } from '../auth/local.js';
-import { kindChipStyle, kindMeta, trigChipStyle, TRIGGER_ICON, parseTrigger } from '../lib/display.js';
+import { kindChipStyle, trigChipStyle, parseTrigger } from '../lib/display.js';
 import { fmtTime } from '../lib/time.js';
 
 const router = useRouter();
 const thoughtStore = useThoughtStore();
 const eventStore = useEventStore();
 const subjectStore = useSubjectStore();
+const vocabStore = useVocabStore();
 
 // —— 快捷输入(内联,最快路径:内容 + 发送) ——
 const kind = ref('想法');
@@ -73,7 +77,7 @@ const fThread = ref('');
 const fHandle = ref('');
 const typeOptions = computed(() => [
   { text: '全部类型', value: '' },
-  ...THOUGHT_KINDS.map((k) => ({ text: k, value: k })),
+  ...vocabStore.kinds.map((k) => ({ text: k, value: k })),
   { text: '记录', value: '记录' },
   { text: '小结', value: '小结' },
 ]);
@@ -155,10 +159,10 @@ const eventTitle = (id) => eventStore.byId(id)?.title || '线索';
 const copyRow = (it) => copyText(it.content);
 // 视觉映射:类型色标签 / 触发源图标
 const kindStyle = (k) => {
-  const m = kindMeta(k);
+  const m = vocabStore.kindMetaOf(k);
   return { color: m.color, borderColor: m.color + '59', background: m.color + '1f' };
 };
-const kindIcon = (k) => kindMeta(k).icon;
+const kindIcon = (k) => vocabStore.kindMetaOf(k).icon;
 const trig = (src) => parseTrigger(src);
 
 // 二次修改:点击=编辑,长按=操作菜单(编辑/删除);旧值自动存入修订历史
@@ -206,6 +210,11 @@ function onQuickCreated(row) {
   else form.subjectId = row.id;
 }
 const showGuide = ref(false);
+// 自定义类型/触发源:就地新建 + 管理
+const showKindCreate = ref(false);
+const showTriggerCreate = ref(false);
+const showVocabManage = ref(false);
+const vocabManageScope = ref('kind');
 // 一键转线索:想法长成事件时,长按菜单直达(建线索+原记录改挂)
 const showConvert = ref(false);
 function startConvert() {
@@ -273,13 +282,15 @@ function openHandle(it) {
           <span>上次挂靠</span>
           <span class="reattach" @click="reattachLast">⟲ 重挂{{ lastSubjectName ? ' @' + lastSubjectName : '' }}{{ lastEventTitle ? ' #' + lastEventTitle : '' }}</span>
         </div>
-        <div class="block-label">🏷 类型 · 这是一条什么性质的记录</div>
+        <div class="block-label row-between"><span>🏷 类型 · 这是一条什么性质的记录</span><span class="manage-link" @click="vocabManageScope = 'kind'; showVocabManage = true">管理</span></div>
         <div class="chip-row">
-          <button v-for="k in THOUGHT_KINDS" :key="k" class="tag-chip" :class="{ active: kind === k }" :style="kindChipStyle(k, kind === k)" @click="kind = k">{{ kindMeta(k).icon }} {{ k }}</button>
+          <button v-for="k in vocabStore.kinds" :key="k" class="tag-chip" :class="{ active: kind === k }" :style="kindChipStyle(k, kind === k)" @click="kind = k">{{ vocabStore.kindMetaOf(k).icon }} {{ k }}</button>
+          <button class="tag-chip add-chip" @click="showKindCreate = true">+ 自定义</button>
         </div>
-        <div class="block-label">📌 触发源 · 由什么引发</div>
+        <div class="block-label row-between"><span>📌 触发源 · 由什么引发</span><span class="manage-link" @click="vocabManageScope = 'trigger'; showVocabManage = true">管理</span></div>
         <div class="chip-row">
-          <button v-for="k in TRIGGER_KINDS" :key="k" class="tag-chip" :class="{ active: triggerKind === k }" :style="trigChipStyle(k, triggerKind === k)" @click="triggerKind = triggerKind === k ? '' : k">{{ TRIGGER_ICON[k] }} {{ k }}</button>
+          <button v-for="k in vocabStore.triggers" :key="k" class="tag-chip" :class="{ active: triggerKind === k }" :style="trigChipStyle(k, triggerKind === k)" @click="triggerKind = triggerKind === k ? '' : k">{{ vocabStore.triggerIconOf(k) }} {{ k }}</button>
+          <button class="tag-chip add-chip" @click="showTriggerCreate = true">+ 自定义</button>
         </div>
         <van-field v-model="form.triggerNote" type="textarea" rows="1" autosize placeholder="触发说明(选填)" />
         <div class="block-label row-between">
@@ -353,6 +364,9 @@ function openHandle(it) {
 
     <QuickCreate v-model:show="showQuickCreate" :type="quickCreateType" @created="onQuickCreated" />
     <AttachGuide v-model:show="showGuide" />
+    <VocabQuickCreate v-model:show="showKindCreate" type="kind" @created="(row) => (kind = row.name)" />
+    <VocabQuickCreate v-model:show="showTriggerCreate" type="trigger" @created="(row) => (triggerKind = row.name)" />
+    <VocabManage v-model:show="showVocabManage" :scope="vocabManageScope" />
     <HandleStatusSheet v-model:show="showHandle" :type="handleType" :target="handleItem?.raw || null" @saved="handleItem = null" />
 
     <van-action-sheet
@@ -376,6 +390,9 @@ function openHandle(it) {
 .quick-foot { display: flex; justify-content: space-between; padding: 4px 2px 0; }
 .block-label { font-size: 12px; color: var(--text-3); margin: 10px 2px 6px; }
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 2px; }
+.row-between { display: flex; align-items: center; justify-content: space-between; }
+.manage-link { color: var(--brand); cursor: pointer; font-size: 12px; }
+.tag-chip.add-chip { border-style: dashed; color: var(--text-3); }
 .tag-chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 13px; font-size: 12px; color: var(--text-2); }
 .tag-chip.active { border-color: var(--brand); color: var(--brand); font-weight: 600; background: color-mix(in srgb, var(--brand) 8%, transparent); }
 .add-chip { border-style: dashed; color: var(--text-3); }

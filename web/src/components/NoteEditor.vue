@@ -7,8 +7,10 @@ import { useEventStore } from '../stores/event.js';
 import { useThoughtStore } from '../stores/thought.js';
 import { useSubjectStore } from '../stores/subject.js';
 import QuickCreate from './QuickCreate.vue';
+import VocabQuickCreate from './VocabQuickCreate.vue';
+import VocabManage from './VocabManage.vue';
 import AttachGuide from './AttachGuide.vue';
-import { TRIGGER_KINDS, THOUGHT_KINDS } from '../lib/domain.js';
+import { useVocabStore } from '../stores/vocab.js';
 import { toLocalInput, fromLocalInput } from '../lib/time.js';
 
 const props = defineProps({
@@ -21,6 +23,7 @@ const emit = defineEmits(['update:show', 'saved']);
 const eventStore = useEventStore();
 const thoughtStore = useThoughtStore();
 const subjectStore = useSubjectStore();
+const vocabStore = useVocabStore();
 const showHistory = ref(false);
 const form = reactive({
   content: '', kind: '', triggerKind: '', triggerNote: '', at: '',
@@ -52,10 +55,10 @@ const attachThreads = computed(() => {
 });
 const attachSubjectName = computed(() => subjectStore.nameOf(form.subjectId));
 
-// thought.source 的拼装/解析(「由X触发:说明」)与创建侧保持一致
+// thought.source 的拼装/解析(「由X触发:说明」)与创建侧保持一致;0.9.0 起触发源不限内置白名单(自定义词表值原样保留)
 function parseSource(src) {
   const m = String(src || '').match(/^由(.+?)触发(?::([\s\S]*))?$/);
-  if (m) return { kind: TRIGGER_KINDS.includes(m[1]) ? m[1] : '', note: m[2] || '' };
+  if (m) return { kind: m[1], note: m[2] || '' };
   return { kind: '', note: String(src || '') };
 }
 function buildSource(kind, note) {
@@ -98,6 +101,11 @@ const edits = () => (props.thought || props.entry)?.edits || [];
 
 // 挂靠就地快速新建:建好即自动选中
 const showQuickCreate = ref(false);
+// 自定义类型/触发源:就地新建 + 管理
+const showKindCreate = ref(false);
+const showTriggerCreate = ref(false);
+const showVocabManage = ref(false);
+const vocabManageScope = ref('kind');
 const quickCreateType = ref('subject');
 function quickCreate(type) {
   quickCreateType.value = type;
@@ -153,15 +161,17 @@ async function save() {
       <van-field v-model="form.content" type="textarea" rows="3" autosize placeholder="修改后的内容 *" />
 
       <template v-if="!isEntry()">
-        <div class="block-label">类型</div>
+        <div class="block-label row-between"><span>类型</span><span class="manage-link" @click="vocabManageScope = 'kind'; showVocabManage = true">管理</span></div>
         <div class="chip-row">
-          <button v-for="k in THOUGHT_KINDS" :key="k" class="tag-chip" :class="{ active: form.kind === k }" @click="form.kind = k">{{ k }}</button>
+          <button v-for="k in vocabStore.kinds" :key="k" class="tag-chip" :class="{ active: form.kind === k }" @click="form.kind = k">{{ vocabStore.kindMetaOf(k).icon }} {{ k }}</button>
+          <button class="tag-chip add-chip" @click="showKindCreate = true">+ 自定义</button>
         </div>
       </template>
       <template v-if="!isSummary()">
-        <div class="block-label">触发源</div>
+        <div class="block-label row-between"><span>触发源</span><span class="manage-link" @click="vocabManageScope = 'trigger'; showVocabManage = true">管理</span></div>
         <div class="chip-row">
-          <button v-for="k in TRIGGER_KINDS" :key="k" class="tag-chip" :class="{ active: form.triggerKind === k }" @click="form.triggerKind = form.triggerKind === k ? '' : k">{{ k }}</button>
+          <button v-for="k in vocabStore.triggers" :key="k" class="tag-chip" :class="{ active: form.triggerKind === k }" @click="form.triggerKind = form.triggerKind === k ? '' : k">{{ vocabStore.triggerIconOf(k) }} {{ k }}</button>
+          <button class="tag-chip add-chip" @click="showTriggerCreate = true">+ 自定义</button>
         </div>
         <van-field v-model="form.triggerNote" type="textarea" rows="1" autosize placeholder="触发说明" />
       </template>
@@ -205,6 +215,9 @@ async function save() {
 
       <van-button type="primary" round block style="margin-top: 14px" @click="save">保存修改</van-button>
       <QuickCreate v-model:show="showQuickCreate" :type="quickCreateType" @created="onQuickCreated" />
+      <VocabQuickCreate v-model:show="showKindCreate" type="kind" @created="(row) => (form.kind = row.name)" />
+      <VocabQuickCreate v-model:show="showTriggerCreate" type="trigger" @created="(row) => (form.triggerKind = row.name)" />
+      <VocabManage v-model:show="showVocabManage" :scope="vocabManageScope" />
       <AttachGuide v-model:show="showGuide" />
     </div>
   </van-popup>
@@ -214,6 +227,9 @@ async function save() {
 .form-wrap { padding: 18px 14px 6px; display: flex; flex-direction: column; }
 .pop-head { display: flex; align-items: center; justify-content: space-between; font-size: 16px; font-weight: 700; margin-bottom: 10px; }
 .block-label { font-size: 12px; color: var(--text-3); margin: 12px 2px 6px; }
+.row-between { display: flex; align-items: center; justify-content: space-between; }
+.manage-link { color: var(--brand); cursor: pointer; font-size: 12px; }
+.tag-chip.add-chip { border-style: dashed; color: var(--text-3); }
 .row-between { display: flex; align-items: center; justify-content: space-between; }
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 2px; }
 .tag-chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 13px; font-size: 12px; color: var(--text-2); }

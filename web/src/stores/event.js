@@ -4,7 +4,7 @@ import { defineStore } from 'pinia';
 import { putRow, softDelete, getAllEvents, getAllEventEntries, onChange } from '../db/repo.js';
 import { uuid } from '../lib/util.js';
 import { logInfo } from '../lib/logger.js';
-import { TRIGGER_KINDS, THREAD_STATES, THREAD_STATE_META, HANDLE_STATUSES } from '../lib/domain.js';
+import { THREAD_STATES, THREAD_STATE_META, HANDLE_STATUSES } from '../lib/domain.js';
 
 export const useEventStore = defineStore('event', {
   state: () => ({ events: [], entries: [], loaded: false }),
@@ -85,7 +85,7 @@ export const useEventStore = defineStore('event', {
         eventId,
         kind: kind === 'summary' ? 'summary' : 'record',
         content: text,
-        triggerKind: TRIGGER_KINDS.includes(triggerKind) ? triggerKind : '',
+        triggerKind: String(triggerKind || '').trim(),
         triggerNote: String(triggerNote || '').trim(),
         at: at || Date.now(),
         handleStatus: 'pending',
@@ -105,7 +105,7 @@ export const useEventStore = defineStore('event', {
       const next = {
         ...en,
         content: text,
-        triggerKind: triggerKind !== undefined ? (TRIGGER_KINDS.includes(triggerKind) ? triggerKind : '') : en.triggerKind,
+        triggerKind: triggerKind !== undefined ? String(triggerKind || '').trim() : en.triggerKind,
         triggerNote: triggerNote !== undefined ? String(triggerNote).trim() : en.triggerNote,
         at: at ?? en.at,
         edits: [...(en.edits || []), { at: Date.now(), content: en.content, triggerKind: en.triggerKind || '', triggerNote: en.triggerNote || '' }],

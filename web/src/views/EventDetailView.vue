@@ -8,6 +8,7 @@ import { showConfirmDialog, showSuccessToast } from 'vant';
 import { useEventStore } from '../stores/event.js';
 import { useThoughtStore } from '../stores/thought.js';
 import { useSubjectStore } from '../stores/subject.js';
+import { useVocabStore } from '../stores/vocab.js';
 import { useCatalogStore } from '../stores/catalog.js';
 import NoteComposer from '../components/NoteComposer.vue';
 import NoteEditor from '../components/NoteEditor.vue';
@@ -23,6 +24,7 @@ const router = useRouter();
 const eventStore = useEventStore();
 const thoughtStore = useThoughtStore();
 const subjectStore = useSubjectStore();
+const vocabStore = useVocabStore();
 const catalog = useCatalogStore();
 
 const eid = computed(() => route.params.id);
@@ -85,10 +87,10 @@ async function removeItem(it) {
 }
 // 视觉映射:类型色标签(挂记取 · 前的原始类型)/触发源图标
 const kindStyle = (k) => {
-  const m = kindMeta(k.split(' · ')[0]);
+  const m = vocabStore.kindMetaOf(k.split(' · ')[0]);
   return { color: m.color, borderColor: m.color + '59', background: m.color + '1f' };
 };
-const kindIcon = (k) => kindMeta(k.split(' · ')[0]).icon;
+const kindIcon = (k) => vocabStore.kindMetaOf(k.split(' · ')[0]).icon;
 const trig = (src) => parseTrigger(src);
 
 // 时间线过滤:全部 / 只看想法(挂记) / 只看小结 —— 看判断变化时聚焦

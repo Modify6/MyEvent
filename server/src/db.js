@@ -35,6 +35,7 @@ export const TABLES = {
     'handleStatus', 'handleNote', 'handledAt', 'statusHistory', 'createdAt', 'updatedAt', 'deleted',
   ],
   folders: ['id', 'name', 'color', 'sort', 'scope', 'createdAt', 'updatedAt', 'deleted'],
+  vocab: ['id', 'type', 'name', 'color', 'icon', 'sort', 'createdAt', 'updatedAt', 'deleted'],
 };
 
 const INT_COLS = new Set([

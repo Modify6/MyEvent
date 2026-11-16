@@ -81,6 +81,22 @@ db.version(5).stores({
   logs: '++id, at',
 });
 
+// v6:自定义词表——用户自建记录类型(type='kind')与触发源(type='trigger'),与内置常量合并展示
+db.version(6).stores({
+  events: 'id, categoryId, threadState, folderId, updatedAt, createdAt, deleted',
+  categories: 'id, sort, updatedAt, deleted',
+  subjects: 'id, type, folderId, createdAt, updatedAt, deleted',
+  thoughts: 'id, subjectId, kind, state, at, createdAt, updatedAt, deleted',
+  predictions: 'id, subjectId, kind, status, windowEnd, verifiedAt, createdAt, updatedAt, deleted',
+  rules: 'id, validity, scene, createdAt, updatedAt, deleted',
+  eventEntries: 'id, eventId, at, createdAt, updatedAt, deleted',
+  folders: 'id, sort, updatedAt, deleted',
+  vocab: 'id, type, sort, updatedAt, deleted',
+  outbox: '++seq, key',
+  meta: 'key',
+  logs: '++id, at',
+});
+
 // 供 E2E 数据库级断言（Playwright）
 if (typeof window !== 'undefined') window.__myeventDebug = { db };
 

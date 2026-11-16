@@ -18,9 +18,15 @@ import VersionHistory from '../components/VersionHistory.vue';
 
 const DATA_TABLES = ['categories', 'events', 'subjects', 'thoughts', 'predictions', 'rules', 'eventEntries'];
 
+import { useVocabStore } from '../stores/vocab.js';
+import VocabManage from '../components/VocabManage.vue';
+
 const auth = useAuthStore();
 const sync = useSyncStore();
 const serverUrl = ref('');
+const vocabStore = useVocabStore();
+const showVocabManage = ref(false);
+const vocabManageScope = ref('kind');
 const password = ref('');
 const loggingIn = ref(false);
 const logsText = ref('');
@@ -132,6 +138,15 @@ async function backupNow() {
     </div>
 
     <div class="card">
+      <div class="section-title" style="margin-top: 0">类型与触发源</div>
+      <div class="muted" style="margin-bottom: 10px">记录类型 {{ vocabStore.kinds.length }} 种 · 触发源 {{ vocabStore.triggers.length }} 种;自定义项随云端同步。</div>
+      <div class="btn-row">
+        <van-button size="small" plain round icon="label-o" @click="vocabManageScope = 'kind'; showVocabManage = true">管理类型</van-button>
+        <van-button size="small" plain round icon="chat-o" @click="vocabManageScope = 'trigger'; showVocabManage = true">管理触发源</van-button>
+      </div>
+    </div>
+
+    <div class="card">
       <div class="section-title" style="margin-top: 0">数据 · 导出 / 导入</div>
       <div class="muted" style="margin-bottom: 10px">本地数据完全归你:导出 JSON 随时带走;导入按修改时间合并,不覆盖新数据。</div>
       <div class="btn-row" style="margin-bottom: 10px">
@@ -169,6 +184,7 @@ async function backupNow() {
     </div>
 
     <VersionHistory v-model:show="showVersionHistory" />
+    <VocabManage v-model:show="showVocabManage" :scope="vocabManageScope" />
     <AppGuide v-model:show="showGuide" />
 
     <van-popup v-model:show="showLogs" position="bottom" round style="height: 70vh">
