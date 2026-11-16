@@ -1,6 +1,6 @@
 // 版本贯通：web/package.json 为唯一版本源
-// 同步到 app/android/app/build.gradle 的 versionName + versionCode（APK 设置里显示的就是它）
-// 用法：node scripts/sync-version.mjs（apk.bat 打包前自动执行）
+// 同步到：根目录/server 的 package.json + app/android/app/build.gradle（versionName/versionCode）+ .apk-version
+// 用法：node scripts/sync-version.mjs（apk.bat 打包与 release.mjs 发版前自动执行）
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,6 +16,19 @@ if (!/^\d+\.\d+\.\d+$/.test(version)) {
 const [major, minor, patch] = version.split('.').map(Number);
 const versionCode = major * 10000 + minor * 100 + patch;
 
+// —— package.json 贯通（根目录 / server）：写前比对，无变化不动文件 ——
+for (const rel of ['package.json', 'server/package.json']) {
+  const p = path.join(ROOT, rel);
+  const j = JSON.parse(fs.readFileSync(p, 'utf8'));
+  if (j.version !== version) {
+    j.version = version;
+    fs.writeFileSync(p, JSON.stringify(j, null, 2) + '\n');
+    console.log(`版本已写入: ${rel} → v${version}`);
+  } else {
+    console.log(`版本已同步: ${rel} (v${version})`);
+  }
+}
+
 const gradlePath = path.join(ROOT, 'app/android/app/build.gradle');
 let gradle = fs.readFileSync(gradlePath, 'utf8');
 const before = gradle;
@@ -24,7 +37,7 @@ gradle = gradle
   .replace(/versionName "[^"]*"/, `versionName "${version}"`);
 
 if (gradle === before) {
-  console.log(`版本已同步: v${version} (code ${versionCode})`);
+  console.log(`版本已同步: build.gradle (v${version}, code ${versionCode})`);
 } else {
   fs.writeFileSync(gradlePath, gradle);
   console.log(`版本已写入: versionName ${version} · versionCode ${versionCode}`);

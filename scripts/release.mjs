@@ -1,6 +1,6 @@
 // 一键发版脚本：像正规软件一样把"版本、测试、归档、提交、标签、推送"串成一条流水线
 // 用法：node scripts/release.mjs patch|minor|major|x.y.z   （默认 patch）
-// 流程：工作树检查 → 单元测试 → 版本号贯通 → CHANGELOG 自动生成 → 构建 → 提交 → 标签 → 推送（带重试）
+// 流程：工作树检查 → 单元测试 → 版本号贯通 → CHANGELOG 自动生成 → 构建 + 自动打 APK（同号）→ 提交 → 标签 → 推送（带重试）
 import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
@@ -46,11 +46,7 @@ if (VERSION_RE.test(bump)) {
 if (!VERSION_RE.test(next)) { console.error('[错误] 版本参数应为 patch|minor|major|x.y.z'); process.exit(1); }
 webPkg.version = next;
 fs.writeFileSync(webPkgPath, JSON.stringify(webPkg, null, 2) + '\n');
-for (const p of [ROOT + '/package.json', ROOT + '/server/package.json']) {
-  const j = JSON.parse(fs.readFileSync(p, 'utf8'));
-  j.version = next;
-  fs.writeFileSync(p, JSON.stringify(j, null, 2) + '\n');
-}
+// 全量贯通（根目录/server package.json + build.gradle + .apk-version）——只走 sync-version 一条链，杜绝双轨漂移
 run('node scripts/sync-version.mjs');
 console.log(`版本: ${cur} -> ${next}`);
 
@@ -97,9 +93,12 @@ console.log('  1. README「功能」清单是否需要补充本版新功能条�
 console.log('  2. docs/lessons.md 是否有新的 bug 根因教训需要归档');
 console.log('  3. README「后续路线」是否需要勾选已完成项');
 
-// —— 4. 构建前端 ——
+// —— 4. 构建前端 + 自动打 APK（--pin 固定为本版号，不发版号与 APK 号错位） ——
 console.log('\n[4/6] 构建前端...');
 run('npm --prefix web run build');
+
+console.log('\n[4.5/6] 自动打包 APK（与本版同号）...');
+run(`node scripts/apk.mjs --pin ${next}`);
 
 // —— 5. 提交 + 标签 ——
 console.log('\n[5/6] 提交与标签...');
@@ -123,6 +122,7 @@ for (let i = 1; i <= 5; i++) {
 
 console.log('\n========== 发版完成 ==========');
 console.log(`版本: v${next}（versionCode ${next.split('.')[0] * 10000 + Number(next.split('.')[1]) * 100 + Number(next.split('.')[2])}）`);
+console.log(`APK: MyEvent-v${next}.apk（已自动生成于项目根目录）`);
 if (pushed) {
   let repoUrl = '';
   try {

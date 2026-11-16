@@ -57,10 +57,23 @@ console.log(`[工具链] Gradle缓存=${env.GRADLE_USER_HOME}`);
 
 // —— 版本策略：相对上次打包，代码有变化时自动递增小版本号（patch），无变化沿用 ——
 // 版本唯一源仍是 web/package.json；release.mjs 的 minor/major 从当前值继续向上
+// --pin x.y.z：跳过自动递增，用指定版本打包（release.mjs / upload.sh 的自动化流水线用，
+//   避免"流水线内已定版、打包器又递增一版"导致云端/发版号与 APK 号错位）
 import { execSync as _execSync } from 'node:child_process';
+const pinIdx = process.argv.indexOf('--pin');
+const pinVer = pinIdx >= 0 ? process.argv[pinIdx + 1] : null;
 const pkgPath = path.join(ROOT, 'web', 'package.json');
 const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-let ver = pkg.version;
+let ver = pinVer || pkg.version;
+if (pinVer) {
+  if (!/^\d+\.\d+\.\d+$/.test(pinVer)) die(`--pin 版本号格式应为 x.y.z，收到: ${pinVer}`);
+  if (pkg.version !== pinVer) {
+    pkg.version = pinVer;
+    fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+    console.log(`[版本] web/package.json 已对齐到 --pin 指定版本 v${pinVer}`);
+  }
+  console.log(`[版本] 使用固定版本 v${pinVer} 打包（跳过自动递增）`);
+}
 let head = 'nogit';
 let dirtyOthers = false;
 try {
@@ -76,7 +89,9 @@ try {
 } catch {}
 const stateFile = path.join(ROOT, '.apk-build-state.json');
 const last = fs.existsSync(stateFile) ? JSON.parse(fs.readFileSync(stateFile, 'utf8')) : null;
-if (!last || last.head !== head || last.dirty !== dirtyOthers || last.base !== ver) {
+if (pinVer) {
+  console.log(`[版本] --pin 模式沿用 v${ver}，不对比上次打包状态`);
+} else if (!last || last.head !== head || last.dirty !== dirtyOthers || last.base !== ver) {
   const [maj, min, pat] = ver.split('.').map(Number);
   ver = `${maj}.${min}.${pat + 1}`;
   pkg.version = ver;

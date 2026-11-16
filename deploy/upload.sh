@@ -25,6 +25,16 @@ else
   SSH_OPTS=(-i "$PWD/deploy/.ssh-key/id_ed25519" -o IdentitiesOnly=yes)
 fi
 
+# —— 部署前自动生成 APK（--pin 固定为当前 web 版本，不递增；保证云端版本号与 APK 号一致）——
+# SKIP_APK=1 bash deploy/upload.sh 可跳过（如只改了服务端或刚打过包）
+LOCAL_VER=$(node -p "require('./web/package.json').version")
+if [ "${SKIP_APK:-0}" != "1" ]; then
+  echo "== 部署前置：自动生成 APK（与本次部署同版本 v$LOCAL_VER）=="
+  node scripts/apk.mjs --pin "$LOCAL_VER"
+else
+  echo "== SKIP_APK=1，跳过 APK 生成（本次部署版本 v$LOCAL_VER）=="
+fi
+
 # tar over ssh（Windows Git Bash 无 rsync）；排除依赖/构建产物/数据/敏感文件
 tar -czf - \
   --exclude=./.git \
