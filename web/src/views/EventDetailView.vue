@@ -253,6 +253,13 @@ async function removeThread() {
               </span>
             </div>
           </div>
+          <!-- 绑定跳转:挂记绑了对象就能一键进对象页(模仿右侧复制按钮的侧边按钮) -->
+          <span
+            v-if="it.type === 't' && it.raw.subjectId"
+            class="row-jump"
+            title="进入绑定的对象"
+            @click.stop="router.push(`/subjects/${it.raw.subjectId}`)"
+          >@</span>
           <van-icon name="records" class="row-copy" title="复制这条" @click.stop="copyRow(it)" />
         </div>
       </div>
@@ -305,6 +312,7 @@ async function removeThread() {
 .tl-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .tl-item .van-icon { cursor: pointer; margin-top: 3px; flex: none; }
 .row-copy { color: var(--text-3); font-size: 15px; }
+.row-jump { color: var(--text-3); font-size: 14px; font-weight: 700; margin-top: 3px; flex: none; cursor: pointer; padding: 0 2px; }
 .tl-item.handled .tl-text { color: var(--text-3); }
 .tl-item.issue .tl-text { color: var(--text-2); }
 .handle-note { font-size: 12px; margin-top: 3px; color: var(--text-2); background: var(--card-2); border-radius: 6px; padding: 4px 8px; white-space: pre-wrap; word-break: break-word; }

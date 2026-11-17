@@ -348,6 +348,9 @@ function openHandle(it) {
                 </span>
               </div>
             </div>
+            <!-- 绑定跳转:绑了线索/对象就能一键进入(模仿复制按钮的侧边按钮) -->
+            <span v-if="it.eventId" class="row-jump" title="进入绑定的线索" @click.stop="router.push(`/events/${it.eventId}`)">#</span>
+            <span v-if="it.subjectId" class="row-jump" title="进入绑定的对象" @click.stop="router.push(`/subjects/${it.subjectId}`)">@</span>
             <van-icon name="records" class="row-copy" title="复制这条" @click.stop="copyRow(it)" />
           </div>
         </div>
@@ -406,6 +409,7 @@ function openHandle(it) {
 .trig { color: var(--text-2); }
 .row-main { flex: 1; min-width: 0; }
 .row-copy { color: var(--text-3); font-size: 15px; margin-top: 3px; flex: none; cursor: pointer; }
+.row-jump { color: var(--text-3); font-size: 14px; font-weight: 700; margin-top: 4px; flex: none; cursor: pointer; padding: 0 2px; }
 .feed-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .feed-item.handled .feed-text { color: var(--text-3); }
 .feed-item.issue .feed-text { color: var(--text-2); }
