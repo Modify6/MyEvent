@@ -168,6 +168,12 @@ const copyRow = (it) => copyText(it.content);
 
 // 行侧边操作菜单:带文字说明(解决裸按钮提示弱的问题),单按钮不占行宽
 const popoverKey = ref('');
+const popoverPlace = ref('top-end');
+// 位置智能选边:按钮在屏幕下半 → 菜单朝上(右对齐),上半 → 朝下,避免盖住正文
+function setPopoverPlace(e) {
+  const r = e.currentTarget.getBoundingClientRect();
+  popoverPlace.value = r.top > window.innerHeight / 2 ? 'top-end' : 'bottom-end';
+}
 const rowActions = (it) => {
   const a = [];
   if (it.type === 't' && it.raw.subjectId) {
@@ -276,11 +282,11 @@ async function removeThread() {
           <!-- 行侧边操作:单按钮弹出菜单(带文字说明,不占行宽) -->
           <van-popover
             :show="popoverKey === it.key"
-            placement="left"
+            :placement="popoverPlace"
             @update:show="(v) => (popoverKey = v ? it.key : '')"
           >
             <template #reference>
-              <van-icon name="ellipsis" class="row-more" title="更多操作" />
+              <van-icon name="ellipsis" class="row-more" title="更多操作" @click="setPopoverPlace($event)" />
             </template>
             <div class="row-menu">
               <template v-for="a in rowActions(it)" :key="a.key">
