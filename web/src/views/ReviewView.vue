@@ -22,10 +22,6 @@ const catalog = useCatalogStore();
 const period = ref('week');
 const cursor = ref(Date.now());
 const showAi = ref(false);
-const periodLabel = computed(() => {
-  const f = (x) => dayjs(x).format('YYYY-MM-DD');
-  return f(range.value.start) + ' ~ ' + f(range.value.end - 1);
-});
 const range = computed(() => rangeFor(period.value, cursor.value));
 const prevRange = computed(() => rangeFor(period.value, shiftCursor(period.value, cursor.value, -1)));
 const weekLabel = computed(() => {
@@ -45,12 +41,6 @@ const weekEntries = computed(() => eventStore.entries.filter((en) => !en.deleted
 const weekPredictions = computed(() => predictionStore.active.filter((p) => inRange(p.madeAt || p.createdAt)));
 const weekVerified = computed(() => predictionStore.active.filter((p) => p.verifiedAt && inRange(p.verifiedAt)));
 const weekReviewed = computed(() => weekEvents.value.filter((e) => e.status === 'reviewed'));
-// AI 盘点数据包:与页内当前周期一致,打开弹层时随 range 联动
-const aiData = computed(() => ({
-  thoughts: weekThoughts.value,
-  entries: weekEntries.value,
-  events: weekEvents.value,
-}));
 
 // 校准统计(全部历史,不限于本周 —— 分桶需要足够样本)
 const buckets = computed(() => calibrationBuckets(predictionStore.active));
@@ -219,7 +209,7 @@ const todos = computed(() => [
       </div>
     </div>
   </div>
-  <AiInventory v-model:show="showAi" scope="period" :period-label="periodLabel" :data="aiData" />
+  <AiInventory v-model:show="showAi" scope="period" />
 </template>
 
 <style scoped>

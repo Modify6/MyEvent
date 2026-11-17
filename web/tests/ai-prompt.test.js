@@ -1,6 +1,6 @@
 // AI 盘点提示词构建测试:数据组装/截断/条数上限/六段指令(fake-indexeddb 不需要,纯函数)
 import { describe, expect, it } from 'vitest';
-import { buildSubjectPrompt, buildPeriodPrompt } from '../src/lib/ai-prompt.js';
+import { buildSubjectPrompt, buildPeriodPrompt, buildDebugReport } from '../src/lib/ai-prompt.js';
 
 const subject = {
   name: 'MyTings',
@@ -81,5 +81,30 @@ describe('周期盘点提示词(buildPeriodPrompt)', () => {
   it('空周期给占位说明,不报错', () => {
     const p = buildPeriodPrompt('本周', { thoughts: [], entries: [], events: [] });
     expect(p).toContain('本周期暂无记录');
+  });
+});
+
+describe('诊断报告(buildDebugReport)', () => {
+  it('包含计数快照/提示词全文/AI 回答,空回答标注(空)', () => {
+    const r = buildDebugReport({
+      version: '0.9.7',
+      time: '2026-11-18T00:00:00Z',
+      scope: 'subject',
+      subject: { id: 'sid1', name: 'MyTings' },
+      rangeLabel: '-',
+      counts: { thoughts: 0, entries: 0, events: 3, predictions: 1 },
+      storeTotals: { thoughtsAll: 120, thoughtsActive: 110, eventsActive: 30, entriesAll: 200 },
+      prompt: '# 对象盘点:MyTings',
+      answer: '',
+    });
+    expect(r).toContain('[MyEvent 诊断信息]');
+    expect(r).toContain('v0.9.7');
+    expect(r).toContain('对象「MyTings」 id=sid1');
+    expect(r).toContain('thoughts: 0');
+    expect(r).toContain('thoughtsAll: 120');
+    expect(r).toContain('--- 提示词开始 ---');
+    expect(r).toContain('# 对象盘点:MyTings');
+    expect(r).toContain('--- AI 回答开始 ---');
+    expect(r).toContain('(空)');
   });
 });

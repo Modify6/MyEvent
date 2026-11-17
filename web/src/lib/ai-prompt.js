@@ -95,3 +95,27 @@ ${all.slice(0, 80).map((x) => `- [${fmt(x.at)}] ${x.kind}: ${clip(x.content)}`).
   parts.push(INSTRUCTIONS);
   return parts.join('\n\n');
 }
+
+// 诊断报告:计数快照 + 完整提示词 + AI 回答 —— 用户一键复制发给开发者,定位"没带入数据"类问题
+export function buildDebugReport({ version = '', time = '', scope = '', subject = null, rangeLabel = '-', counts = {}, storeTotals = {}, prompt = '', answer = '' } = {}) {
+  const kv = (obj) => Object.entries(obj).map(([k, v]) => `  - ${k}: ${v}`).join('\n');
+  const lines = [
+    '[MyEvent 诊断信息]',
+    `- 版本: v${version}`,
+    `- 时间: ${time}`,
+    `- 盘点范围: ${scope}${subject ? `(对象「${subject.name}」 id=${subject.id})` : ''}`,
+    `- 周期标签: ${rangeLabel}`,
+    `- 盘点用数据计数:\n${kv(counts)}`,
+    `- 全库总量(对照):\n${kv(storeTotals)}`,
+    `- 提示词长度: ${String(prompt || '').length} 字`,
+    '',
+    '--- 提示词开始 ---',
+    String(prompt || '(空)'),
+    '--- 提示词结束 ---',
+    '',
+    '--- AI 回答开始 ---',
+    String(answer || '').trim() || '(空)',
+    '--- AI 回答结束 ---',
+  ];
+  return lines.join('\n');
+}
