@@ -21,7 +21,7 @@ import HandleStatusSheet from '../components/HandleStatusSheet.vue';
 import { copyText } from '../lib/clipboard.js';
 import { HANDLE_STATUSES, HANDLE_STATUS_META } from '../lib/domain.js';
 import { getLastAttach, setLastAttach } from '../auth/local.js';
-import { kindChipStyle, trigChipStyle, parseTrigger } from '../lib/display.js';
+import { kindChipStyle, trigChipStyle, parseTrigger, avatarColor } from '../lib/display.js';
 import { fmtTime } from '../lib/time.js';
 
 const router = useRouter();
@@ -160,11 +160,16 @@ const copyRow = (it) => copyText(it.content);
 
 // 行侧边操作菜单:带文字说明(解决裸按钮提示弱的问题),单按钮不占行宽
 const popoverKey = ref('');
+// 行侧边菜单数据:彩色图标块 + 主标题 + 副标题(对象色随其专属色)
 const rowActions = (it) => {
   const a = [];
-  if (it.eventId) a.push({ key: 'event', text: '进入线索 · ' + eventTitle(it.eventId).slice(0, 12), icon: 'notes-o' });
-  if (it.subjectId) a.push({ key: 'subject', text: '进入对象 · ' + subjectName(it.subjectId), icon: 'contact' });
-  a.push({ key: 'copy', text: '复制这条', icon: 'records' });
+  if (it.eventId) a.push({ key: 'event', icon: 'notes-o', color: '#4f6ef7', title: '进入线索', sub: eventTitle(it.eventId) });
+  if (it.subjectId) {
+    const c = avatarColor(it.subjectId);
+    a.push({ key: 'subject', icon: 'contact', color: c, title: '进入对象', sub: subjectName(it.subjectId) });
+  }
+  if (a.length) a.push({ key: 'sep' });
+  a.push({ key: 'copy', icon: 'records', color: '#8f9bb3', title: '复制这条' });
   return a;
 };
 function onRowAction(a, it) {
@@ -369,13 +374,23 @@ function openHandle(it) {
             <van-popover
               :show="popoverKey === it.key"
               placement="left"
-              :actions="rowActions(it)"
-              @select="(a) => onRowAction(a, it)"
               @update:show="(v) => (popoverKey = v ? it.key : '')"
             >
               <template #reference>
                 <van-icon name="ellipsis" class="row-more" title="更多操作" />
               </template>
+              <div class="row-menu">
+                <template v-for="a in rowActions(it)" :key="a.key">
+                  <div v-if="a.key === 'sep'" class="row-menu-sep" />
+                  <div v-else class="row-menu-item" @click.stop="onRowAction(a, it)">
+                    <span class="row-menu-ic" :style="{ background: a.color + '1f', color: a.color }"><van-icon :name="a.icon" /></span>
+                    <span class="row-menu-txt">
+                      <b>{{ a.title }}</b>
+                      <i v-if="a.sub">{{ a.sub }}</i>
+                    </span>
+                  </div>
+                </template>
+              </div>
             </van-popover>
           </div>
         </div>
@@ -445,4 +460,18 @@ function openHandle(it) {
 .chip-thread { color: var(--brand); background: color-mix(in srgb, var(--brand) 12%, transparent); }
 .chip-subject { color: #ff9d5c; background: color-mix(in srgb, #ff9d5c 12%, transparent); }
 .feed-item { cursor: pointer; -webkit-user-select: none; user-select: none; }
+</style>
+
+<style>
+/* 行侧边弹出菜单(popover 内容挂 body,须用全局样式) */
+.row-menu { min-width: 178px; padding: 6px; }
+.row-menu-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px; cursor: pointer; }
+.row-menu-item:active { background: color-mix(in srgb, var(--text) 7%, transparent); }
+.row-menu-ic { width: 30px; height: 30px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex: none; }
+.row-menu-txt { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.row-menu-txt b { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.row-menu-txt i { font-style: normal; font-size: 11.5px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 158px; }
+.row-menu-sep { height: 1px; background: var(--line); margin: 4px 6px; }
+.row-more { border-radius: 8px; transition: background 0.15s, color 0.15s; }
+.row-more:active { background: color-mix(in srgb, var(--text) 10%, transparent); color: var(--brand); }
 </style>
