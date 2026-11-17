@@ -14,6 +14,7 @@ import { useCatalogStore } from '../stores/catalog.js';
 import EventComposer from '../components/EventComposer.vue';
 import NoteComposer from '../components/NoteComposer.vue';
 import PredictionComposer from '../components/PredictionComposer.vue';
+import AiInventory from '../components/AiInventory.vue';
 import SubjectForm from '../components/SubjectForm.vue';
 import StatusTag from '../components/StatusTag.vue';
 import ConfidenceBar from '../components/ConfidenceBar.vue';
@@ -129,6 +130,7 @@ function goTimeline(it) {
 const showEvent = ref(false);
 const showThought = ref(false);
 const showPred = ref(false);
+const showAi = ref(false);
 const showForm = ref(false);
 
 async function removeSubject() {
@@ -198,6 +200,7 @@ async function removeSubject() {
       <van-button size="small" plain round type="primary" icon="edit" @click="showEvent = true">记事件</van-button>
       <van-button size="small" plain round type="primary" icon="chat-o" @click="showThought = true">记一笔</van-button>
       <van-button size="small" plain round type="primary" icon="aim" @click="showPred = true">做预判</van-button>
+      <van-button size="small" plain round type="warning" icon="smile-o" @click="showAi = true">AI 盘点</van-button>
     </div>
     <div class="hint-line hint-brand seg-explain">
       <span class="se-item"><b style="color: var(--brand)">记事件</b> 新建一条线索</span>
@@ -277,6 +280,13 @@ async function removeSubject() {
     <NoteComposer v-model:show="showThought" :subject-id="sid" />
     <PredictionComposer v-model:show="showPred" :subject-id="sid" @saved="router.push(`/predictions/${$event.id}`)" @locked="router.push(`/predictions/${$event.id}`)" />
     <SubjectForm v-model:show="showForm" :subject="subject" :draft="subject?.currentView ? '' : viewDraft" />
+    <AiInventory
+      v-model:show="showAi"
+      scope="subject"
+      :subject="subject"
+      :data="{ events: subjectEvents, thoughts: thoughtStore.ofSubject(sid), predictions: subjectPredictions }"
+      @saved="showAi = false"
+    />
   </div>
   <div v-else class="page"><div class="card"><div class="empty-tip">对象不存在或已删除</div></div></div>
 </template>

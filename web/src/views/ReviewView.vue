@@ -10,6 +10,7 @@ import { useCatalogStore } from '../stores/catalog.js';
 import { calibrationBuckets, PREDICTION_VERIFIED, PREDICTION_KINDS } from '../lib/domain.js';
 import { TRIGGER_ICON } from '../lib/display.js';
 import { rangeFor, shiftCursor, weekRange, fmtDate } from '../lib/time.js';
+import AiInventory from '../components/AiInventory.vue';
 
 const router = useRouter();
 const eventStore = useEventStore();
@@ -20,6 +21,11 @@ const catalog = useCatalogStore();
 // 周/月视图:可左右切换;月视图额外给出与上月的对比
 const period = ref('week');
 const cursor = ref(Date.now());
+const showAi = ref(false);
+const periodLabel = computed(() => {
+  const f = (x) => dayjs(x).format('YYYY-MM-DD');
+  return f(range.value.start) + ' ~ ' + f(range.value.end - 1);
+});
 const range = computed(() => rangeFor(period.value, cursor.value));
 const prevRange = computed(() => rangeFor(period.value, shiftCursor(period.value, cursor.value, -1)));
 const weekLabel = computed(() => {
@@ -39,6 +45,12 @@ const weekEntries = computed(() => eventStore.entries.filter((en) => !en.deleted
 const weekPredictions = computed(() => predictionStore.active.filter((p) => inRange(p.madeAt || p.createdAt)));
 const weekVerified = computed(() => predictionStore.active.filter((p) => p.verifiedAt && inRange(p.verifiedAt)));
 const weekReviewed = computed(() => weekEvents.value.filter((e) => e.status === 'reviewed'));
+// AI 盘点数据包:与页内当前周期一致,打开弹层时随 range 联动
+const aiData = computed(() => ({
+  thoughts: weekThoughts.value,
+  entries: weekEntries.value,
+  events: weekEvents.value,
+}));
 
 // 校准统计(全部历史,不限于本周 —— 分桶需要足够样本)
 const buckets = computed(() => calibrationBuckets(predictionStore.active));
@@ -121,10 +133,13 @@ const todos = computed(() => [
   <div class="page">
     <div class="page-head">
       <h1>回顾</h1>
-      <div class="week-nav">
-        <van-icon name="arrow-left" @click="shiftWeek(-1)" />
-        <span class="week-label" @click="cursor = Date.now()">{{ weekLabel }}</span>
-        <van-icon name="arrow" @click="shiftWeek(1)" />
+      <div class="head-actions-ai">
+        <van-button size="small" plain round type="warning" icon="smile-o" @click="showAi = true">AI 盘点</van-button>
+        <div class="week-nav">
+          <van-icon name="arrow-left" @click="shiftWeek(-1)" />
+          <span class="week-label" @click="cursor = Date.now()">{{ weekLabel }}</span>
+          <van-icon name="arrow" @click="shiftWeek(1)" />
+        </div>
       </div>
     </div>
     <div class="seg" style="margin-bottom: 10px">
@@ -191,7 +206,7 @@ const todos = computed(() => [
           <span class="val">{{ b.rate == null ? '—' : b.rate + '%' }}<span class="muted"> / {{ b.n }}条</span></span>
         </div>
         <div class="muted" style="margin-top: 6px">竖线 = 完美校准位置:实际命中率(条)越接近它,你的置信度越准。</div>
-      </template>
+</template>
       <div v-else class="empty-tip">还没有已验证的预判 —— 锁定几条预判并等窗口到期,校准曲线会出现在这里</div>
     </div>
 
@@ -204,6 +219,7 @@ const todos = computed(() => [
       </div>
     </div>
   </div>
+  <AiInventory v-model:show="showAi" scope="period" :period-label="periodLabel" :data="aiData" />
 </template>
 
 <style scoped>
