@@ -14,6 +14,7 @@ import NoteComposer from '../components/NoteComposer.vue';
 import NoteEditor from '../components/NoteEditor.vue';
 import ThreadEditor from '../components/ThreadEditor.vue';
 import HandleStatusSheet from '../components/HandleStatusSheet.vue';
+import AiInventory from '../components/AiInventory.vue';
 import StatusTag from '../components/StatusTag.vue';
 import { kindMeta, parseTrigger, avatarColor } from '../lib/display.js';
 import { fmtDate, fmtTime } from '../lib/time.js';
@@ -193,6 +194,7 @@ const loadMore = () => { limit.value += PAGE_SIZE; };
 
 const showNote = ref(false);
 const showSummary = ref(false);
+const showAi = ref(false);
 
 async function removeThread() {
   try {
@@ -231,6 +233,7 @@ async function removeThread() {
         <van-button type="primary" size="small" round icon="edit" @click="showNote = true">记一笔</van-button>
         <van-button plain type="primary" size="small" round icon="notes-o" @click="showSummary = true">写小结</van-button>
         <van-button plain size="small" round icon="description" @click="exportMd">导出</van-button>
+        <van-button plain type="warning" size="small" round icon="smile-o" @click="showAi = true">AI 盘点</van-button>
       </div>
       <div class="btn-row" style="margin-top: 8px">
         <template v-if="stateOf(ev) === 'open'">
@@ -313,6 +316,7 @@ async function removeThread() {
     <NoteComposer v-model:show="showSummary" :event-id="eid" summary-mode />
     <NoteEditor v-model:show="showEditor" :thought="editItem?.type === 't' ? editItem.raw : null" :entry="editItem?.type === 'e' ? editItem.raw : null" @saved="editItem = null" />
     <ThreadEditor v-model:show="showThreadEditor" :thread="ev" />
+    <AiInventory v-model:show="showAi" scope="event" :event="ev" @saved="showAi = false" />
     <HandleStatusSheet v-model:show="showHandle" type="event" :target="ev" :preset="presetState" @saved="presetState = ''" />
     <HandleStatusSheet v-model:show="showRowHandle" :type="rowHandleType" :target="rowHandleItem?.raw || null" @saved="rowHandleItem = null" />
 

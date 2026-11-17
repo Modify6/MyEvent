@@ -1,6 +1,6 @@
 // AI 盘点提示词构建测试:数据组装/截断/条数上限/六段指令(fake-indexeddb 不需要,纯函数)
 import { describe, expect, it } from 'vitest';
-import { buildSubjectPrompt, buildPeriodPrompt, buildDebugReport } from '../src/lib/ai-prompt.js';
+import { buildSubjectPrompt, buildPeriodPrompt, buildEventPrompt, buildDebugReport } from '../src/lib/ai-prompt.js';
 
 const subject = {
   name: 'MyTings',
@@ -106,5 +106,49 @@ describe('诊断报告(buildDebugReport)', () => {
     expect(r).toContain('# 对象盘点:MyTings');
     expect(r).toContain('--- AI 回答开始 ---');
     expect(r).toContain('(空)');
+  });
+});
+
+// 0.9.8:对象盘点带入线索过程记录与挂记;新增线索盘点
+describe('0.9.8 数据扩容', () => {
+  it('对象盘点:线索详情含过程记录与挂记子行', () => {
+    const now = Date.now();
+    const p = buildSubjectPrompt(subject, {
+      events: [{
+        title: 'bug', startAt: now, threadState: 'open',
+        entries: [{ at: now, kind: 'record', content: '压缩包要改为 zip 且必须 winrar 才能解压' }],
+        hangThoughts: [{ at: now, kind: '想法', content: '先兼容 zip 格式' }],
+      }],
+      thoughts: [{ at: now, kind: '想法', content: '直接挂对象的记录' }],
+      predictions: [],
+    });
+    expect(p).toContain('## 线索详情(1/1 条');
+    expect(p).toContain('记录: 压缩包要改为 zip');
+    expect(p).toContain('挂记(想法): 先兼容 zip 格式');
+    expect(p).toContain('直接挂在对象下的记录');
+    expect(p).toContain('直接挂对象的记录');
+  });
+
+  it('线索盘点:事件信息 + 过程时间线(entries+挂记合并)', () => {
+    const now = Date.now();
+    const p = buildEventPrompt(
+      { title: 'bug', startAt: now, threadState: 'open', fact: '解压报错', subjectIds: ['s1'] },
+      {
+        entries: [{ at: now, kind: 'record', content: 'winrar 解压失败' }],
+        thoughts: [{ at: now - 1000, kind: '疑问', content: '要不要换 7z' }],
+        subjects: [{ name: 'un_zip' }],
+      }
+    );
+    expect(p).toContain('# 线索盘点:bug');
+    expect(p).toContain('挂靠对象: un_zip');
+    expect(p).toContain('一句话事实: 解压报错');
+    expect(p).toContain('记录: winrar 解压失败');
+    expect(p).toContain('挂记(疑问): 要不要换 7z');
+    expect(p).toContain('## 一、事实梳理');
+  });
+
+  it('线索盘点:无过程记录给占位说明', () => {
+    const p = buildEventPrompt({ title: '空线索' }, { entries: [], thoughts: [], subjects: [] });
+    expect(p).toContain('(该线索暂无过程记录)');
   });
 });

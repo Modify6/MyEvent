@@ -284,7 +284,15 @@ async function removeSubject() {
       v-model:show="showAi"
       scope="subject"
       :subject="subject"
-      :data="{ events: subjectEvents, thoughts: thoughtStore.ofSubject(sid), predictions: subjectPredictions }"
+      :data="{
+        events: subjectEvents.map((e) => ({
+          ...e,
+          entries: eventStore.entriesOf(e.id),
+          hangThoughts: thoughtStore.active.filter((t) => t.relatedEventId === e.id && !t.subjectId),
+        })),
+        thoughts: thoughtStore.ofSubject(sid),
+        predictions: subjectPredictions,
+      }"
       @saved="showAi = false"
     />
   </div>

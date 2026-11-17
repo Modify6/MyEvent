@@ -6,8 +6,9 @@ import { computed, ref, watch } from 'vue';
 import { showFailToast, showSuccessToast } from 'vant';
 import { useThoughtStore } from '../stores/thought.js';
 import { useEventStore } from '../stores/event.js';
+import { useSubjectStore } from '../stores/subject.js';
 import { APP_VERSION } from '../lib/logger.js';
-import { buildSubjectPrompt, buildPeriodPrompt, buildDebugReport } from '../lib/ai-prompt.js';
+import { buildSubjectPrompt, buildPeriodPrompt, buildEventPrompt, buildDebugReport } from '../lib/ai-prompt.js';
 import { copyText } from '../lib/clipboard.js';
 import dayjs from 'dayjs';
 import { rangeFor } from '../lib/time.js';
@@ -16,17 +17,20 @@ const props = defineProps({
   show: { type: Boolean, default: false },
   scope: { type: String, required: true }, // 'subject' | 'period'
   subject: { type: Object, default: null }, // 对象盘点:对象行
+  event: { type: Object, default: null }, // 线索盘点:事件行(0.9.8 新增 scope='event')
   data: { type: Object, default: null }, // 对象盘点:{ events, thoughts, predictions }(0.9.7 修复:此前漏声明,落入 attrs 导致盘点永远 0 条)
 });
 const emit = defineEmits(['update:show', 'saved']);
 
 const thoughtStore = useThoughtStore();
 const eventStore = useEventStore();
+const subjectStore = useSubjectStore();
 const promptText = ref('');
 const aiAnswer = ref('');
 const periodSel = ref('week'); // 周期盘点范围:'week' | 'month' | 'all'
 
 const isSubject = () => props.scope === 'subject';
+const isEvent = () => props.scope === 'event';
 
 // —— 周期盘点的数据在弹层内自算(范围可切换,不依赖调用方传参) ——
 const periodSelData = computed(() => {
@@ -57,19 +61,33 @@ const periodLabelFull = computed(() => {
 });
 const periodSelSelAll = () => periodSel.value === 'all';
 
-// 当前盘点用的数据:对象盘点用调用方传入(绑定关系),周期盘点自算
-const invData = computed(() => (isSubject() ? props.data || {} : periodSelData.value));
+// 事件盘点数据(自算):该线索的全部过程记录与挂记
+const eventScopeData = computed(() => {
+  const ev = props.event;
+  if (!ev) return { entries: [], thoughts: [], subjects: [] };
+  return {
+    entries: eventStore.entriesOf(ev.id),
+    thoughts: thoughtStore.ofEvent(ev.id),
+    subjects: (ev.subjectIds || []).map((sid) => ({ id: sid, name: subjectStore.nameOf(sid) })),
+  };
+});
+// 当前盘点用的数据:对象盘点用调用方传入(绑定关系),周期/线索盘点自算
+const invData = computed(() => (isSubject() ? props.data || {} : isEvent() ? eventScopeData.value : periodSelData.value));
 const invCounts = computed(() => ({
   thoughts: (invData.value.thoughts || []).length,
   entries: (invData.value.entries || []).length,
   events: (invData.value.events || []).length,
   predictions: (invData.value.predictions || []).length,
 }));
-const totalCount = computed(() => invCounts.value.thoughts + invCounts.value.entries);
+const hangCount = computed(() => (isEvent() ? (invData.value.thoughts || []).length : 0));
+const totalCount = computed(() => (isEvent() ? invCounts.value.entries + hangCount.value : invCounts.value.thoughts + invCounts.value.entries));
 const scopeStats = computed(() => {
   const c = invCounts.value;
   if (isSubject()) {
     return `盘点对象「${props.subject?.name}」:${c.thoughts} 条记录 · ${c.events} 条线索 · ${c.predictions} 条预判`;
+  }
+  if (isEvent()) {
+    return `盘点线索「${props.event?.title}」:${c.entries} 条过程记录 · ${hangCount.value} 条挂记 · 挂靠 ${(eventScopeData.value.subjects || []).map((s) => '@' + s.name).join(' ') || '(无)'}`;
   }
   return `盘点周期 ${periodLabelFull.value}:${c.thoughts + c.entries} 条记录 · ${c.events} 条线索`;
 });
@@ -79,12 +97,21 @@ const emptyHint = computed(() => {
   if (isSubject()) {
     return '⚠ 该对象名下暂无记录——对象盘点只统计已挂到本对象的记录。去记录流用「添加细节」把记录绑定到对象,或改用回顾页的「AI 盘点」做周期盘点。';
   }
+  if (isEvent()) {
+    return '⚠ 该线索暂无过程记录——点「记一笔」记录进展后再盘点;也可直接让 AI 基于事件信息分析。';
+  }
   return '⚠ 当前范围暂无记录——可切换 本周/本月/全部历史,或确认记录的时间。';
 });
 
 // 生成提示词:打开时、以及周期范围切换时
 function build() {
-  if (isSubject()) {
+  if (isEvent()) {
+    promptText.value = buildEventPrompt(props.event, {
+      entries: eventScopeData.value.entries,
+      thoughts: eventScopeData.value.thoughts,
+      subjects: eventScopeData.value.subjects,
+    });
+  } else if (isSubject()) {
     promptText.value = buildSubjectPrompt(props.subject, {
       events: props.data?.events || [],
       thoughts: props.data?.thoughts || [],
@@ -150,6 +177,7 @@ async function saveAnswer() {
       content: text,
       kind: '复盘',
       subjectId: isSubject() ? props.subject?.id || '' : '',
+      relatedEventId: isEvent() ? props.event?.id || '' : '',
       source: 'AI 盘点',
     });
     showSuccessToast('已保存为复盘记录');
@@ -199,7 +227,7 @@ async function saveAnswer() {
       />
       <van-button type="success" round block style="margin-top: 10px" :disabled="!aiAnswer.trim()" @click="saveAnswer">保存为复盘记录</van-button>
       <div class="foot-row">
-        <div class="muted" style="font-size: 11px">保存后可在记录流继续编辑;对象盘点会自动挂到该对象名下。</div>
+        <div class="muted" style="font-size: 11px">保存后可在记录流继续编辑;对象盘点挂到对象名下,线索盘点会进入该线索的时间线。</div>
         <span class="debug-link" @click="copyDebug">复制诊断信息</span>
       </div>
     </div>

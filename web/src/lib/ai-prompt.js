@@ -1,5 +1,6 @@
 // AI 盘点提示词构建(纯函数,无 UI/存储依赖,单测覆盖见 tests/ai-prompt.test.js)
 // 数据组装 + 内嵌六段分析指令 —— 解决"不知道怎么分析、范围怎么定":范围由调用方圈定,框架由指令给定
+// 0.9.8:对象盘点带入线索的过程记录与挂记;新增线索盘点(事件信息+全部过程时间线)
 import dayjs from 'dayjs';
 
 // 截断:超长内容加省略号,保尾部语义
@@ -35,7 +36,22 @@ const INSTRUCTIONS = `请你扮演一名认知复盘教练。基于我提供的�
 
 const HEAD = (title) => `# ${title}\n\n以下是我的原始记录数据。请基于数据完成文末的盘点任务。\n`;
 
-// —— 对象盘点:对象档案 + 线索/记录/预判清单 ——
+// 线索子行:过程记录 + 挂记(内容主体,必须带入)
+const eventSubLines = (e) => {
+  const sub = [];
+  for (const en of (e.entries || []).slice(0, 20)) {
+    sub.push(`  · [${fmt(en.at)}] ${en.kind === 'summary' ? '小结' : '记录'}: ${clip(en.content)}`);
+  }
+  for (const t of (e.hangThoughts || []).slice(0, 20)) {
+    sub.push(`  · [${fmt(t.at)}] 挂记(${t.kind || '想法'}): ${clip(t.content)}`);
+  }
+  const extra = ((e.entries || []).length > 20 || (e.hangThoughts || []).length > 20)
+    ? [`  (该线索另有 ${Math.max(0, (e.entries || []).length - 20) + Math.max(0, (e.hangThoughts || []).length - 20)} 条未附)`]
+    : [];
+  return sub.concat(extra);
+};
+
+// —— 对象盘点:对象档案 + 线索详情(含各自过程记录与挂记) + 直接挂对象的记录 + 预判 ——
 export function buildSubjectPrompt(subject, { events = [], thoughts = [], predictions = [] } = {}) {
   const parts = [HEAD(`对象盘点:${subject?.name || '未命名'}`)];
 
@@ -50,13 +66,17 @@ export function buildSubjectPrompt(subject, { events = [], thoughts = [], predic
 
   const evs = [...events].sort((a, b) => (b.startAt || 0) - (a.startAt || 0));
   if (evs.length) {
-    parts.push(`## 线索(${Math.min(evs.length, 20)}/${evs.length} 条,按开始时间倒序)
-${evs.slice(0, 20).map((e) => `- [${fmt(e.startAt)}] ${clip(e.title, 60)}(状态: ${THREAD_LABEL[e.threadState] || '进行中'})${e.fact ? ' 事实: ' + clip(e.fact, 100) : ''}`).join('\n')}${evs.length > 20 ? `\n(另有 ${evs.length - 20} 条更早线索未附)` : ''}`);
+    const evLines = evs.slice(0, 20).map((e) => {
+      const lines = [`- [${fmt(e.startAt)}] ${clip(e.title, 60)}(状态: ${THREAD_LABEL[e.threadState] || '进行中'})${e.fact ? ' 事实: ' + clip(e.fact, 100) : ''}`];
+      return lines.concat(eventSubLines(e)).join('\n');
+    });
+    parts.push(`## 线索详情(${Math.min(evs.length, 20)}/${evs.length} 条,按开始时间倒序,含各自过程记录与挂记)
+${evLines.join('\n')}${evs.length > 20 ? `\n(另有 ${evs.length - 20} 条更早线索未附)` : ''}`);
   }
 
   const ths = [...thoughts].sort((a, b) => (b.at || 0) - (a.at || 0));
   if (ths.length) {
-    parts.push(`## 记录(${Math.min(ths.length, 60)}/${ths.length} 条,按时间倒序)
+    parts.push(`## 直接挂在对象下的记录(${Math.min(ths.length, 60)}/${ths.length} 条,按时间倒序)
 ${ths.slice(0, 60).map((t) => `- [${fmt(t.at)}] ${t.kind || '想法'}: ${clip(t.content)}`).join('\n')}${ths.length > 60 ? `\n(另有 ${ths.length - 60} 条更早记录未附)` : ''}`);
   }
 
@@ -91,6 +111,35 @@ ${all.slice(0, 80).map((x) => `- [${fmt(x.at)}] ${x.kind}: ${clip(x.content)}`).
     .filter((e) => e.threadState && e.threadState !== 'open')
     .map((e) => `- ${clip(e.title, 50)} → ${THREAD_LABEL[e.threadState] || e.threadState}`);
   if (dynamic.length) parts.push(`## 线索状态变化\n${dynamic.join('\n')}`);
+
+  parts.push(INSTRUCTIONS);
+  return parts.join('\n\n');
+}
+
+// —— 线索盘点:事件信息 + 全部过程记录/挂记(0.9.8 新增) ——
+export function buildEventPrompt(event, { entries = [], thoughts = [], subjects = [] } = {}) {
+  const parts = [HEAD(`线索盘点:${event?.title || '未命名'}`)];
+
+  const ens = [...entries].sort((a, b) => (b.at || 0) - (a.at || 0));
+  const ths = [...thoughts].sort((a, b) => (b.at || 0) - (a.at || 0));
+
+  parts.push(`## 事件信息
+- 标题: ${clip(event?.title, 80)}
+- 开始: ${event?.startAt ? fmt(event.startAt) : '(未填)'}
+- 状态: ${THREAD_LABEL[event?.threadState] || '进行中'}
+- 挂靠对象: ${subjects.map((s) => s.name).join('、') || '(无)'}
+- 一句话事实: ${clip(event?.fact, 200) || '(未填)'}`);
+
+  const all = [
+    ...ens.map((en) => ({ at: en.at, kind: en.kind === 'summary' ? '小结' : '记录', content: en.content })),
+    ...ths.map((t) => ({ at: t.at, kind: `挂记(${t.kind || '想法'})`, content: t.content })),
+  ].sort((a, b) => b.at - a.at);
+  if (all.length) {
+    parts.push(`## 过程时间线(${Math.min(all.length, 100)}/${all.length} 条,按时间倒序)
+${all.slice(0, 100).map((x) => `- [${fmt(x.at)}] ${x.kind}: ${clip(x.content)}`).join('\n')}${all.length > 100 ? `\n(另有 ${all.length - 100} 条未附)` : ''}`);
+  } else {
+    parts.push('## 过程时间线\n(该线索暂无过程记录)');
+  }
 
   parts.push(INSTRUCTIONS);
   return parts.join('\n\n');
