@@ -157,6 +157,21 @@ const subjectName = (id) => subjectStore.nameOf(id);
 const eventTitle = (id) => eventStore.byId(id)?.title || '线索';
 // 一键复制这条记录的原文
 const copyRow = (it) => copyText(it.content);
+
+// 行侧边操作菜单:带文字说明(解决裸按钮提示弱的问题),单按钮不占行宽
+const popoverKey = ref('');
+const rowActions = (it) => {
+  const a = [];
+  if (it.eventId) a.push({ key: 'event', text: '进入线索 · ' + eventTitle(it.eventId).slice(0, 12), icon: 'notes-o' });
+  if (it.subjectId) a.push({ key: 'subject', text: '进入对象 · ' + subjectName(it.subjectId), icon: 'contact' });
+  a.push({ key: 'copy', text: '复制这条', icon: 'records' });
+  return a;
+};
+function onRowAction(a, it) {
+  if (a.key === 'event') router.push(`/events/${it.eventId}`);
+  else if (a.key === 'subject') router.push(`/subjects/${it.subjectId}`);
+  else if (a.key === 'copy') copyRow(it);
+}
 // 视觉映射:类型色标签 / 触发源图标
 const kindStyle = (k) => {
   const m = vocabStore.kindMetaOf(k);
@@ -187,11 +202,13 @@ function startPress(it) {
 function cancelPress() {
   clearTimeout(pressTimer);
 }
-function onItemClick(it) {
+function onItemClick(e, it) {
   if (pressFired) {
     pressFired = false;
     return; // 长按已处理,吞掉紧随的 click
   }
+  // 行侧边「更多操作」触发器的点击归 popover 管,不进编辑
+  if (e?.target?.closest?.('.van-popover__wrapper')) return;
   openEdit(it);
 }
 async function removeItem(it) {
@@ -325,7 +342,7 @@ function openHandle(it) {
           <div
             class="feed-item"
             :class="{ summary: it.summary, handled: it.handleStatus === 'done', issue: it.handleStatus === 'issue' }"
-            @click="onItemClick(it)"
+            @click="onItemClick($event, it)"
             @touchstart.passive="startPress(it)"
             @touchmove.passive="cancelPress"
             @touchend="cancelPress"
@@ -348,10 +365,18 @@ function openHandle(it) {
                 </span>
               </div>
             </div>
-            <!-- 绑定跳转:绑了线索/对象就能一键进入(模仿复制按钮的侧边按钮) -->
-            <span v-if="it.eventId" class="row-jump" title="进入绑定的线索" @click.stop="router.push(`/events/${it.eventId}`)">#</span>
-            <span v-if="it.subjectId" class="row-jump" title="进入绑定的对象" @click.stop="router.push(`/subjects/${it.subjectId}`)">@</span>
-            <van-icon name="records" class="row-copy" title="复制这条" @click.stop="copyRow(it)" />
+            <!-- 行侧边操作:单按钮弹出菜单(带文字说明,不占行宽) -->
+            <van-popover
+              :show="popoverKey === it.key"
+              placement="left"
+              :actions="rowActions(it)"
+              @select="(a) => onRowAction(a, it)"
+              @update:show="(v) => (popoverKey = v ? it.key : '')"
+            >
+              <template #reference>
+                <van-icon name="ellipsis" class="row-more" title="更多操作" />
+              </template>
+            </van-popover>
           </div>
         </div>
       </div>
@@ -408,8 +433,7 @@ function openHandle(it) {
 .feed-kind { flex: none; font-size: 11px; border: 1px solid; border-radius: 4px; padding: 1px 6px; height: fit-content; margin-top: 2px; white-space: nowrap; font-weight: 600; }
 .trig { color: var(--text-2); }
 .row-main { flex: 1; min-width: 0; }
-.row-copy { color: var(--text-3); font-size: 15px; margin-top: 3px; flex: none; cursor: pointer; }
-.row-jump { color: var(--text-3); font-size: 14px; font-weight: 700; margin-top: 4px; flex: none; cursor: pointer; padding: 0 2px; }
+.row-more { color: var(--text-3); font-size: 16px; margin-top: 4px; flex: none; cursor: pointer; padding: 0 4px; }
 .feed-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .feed-item.handled .feed-text { color: var(--text-3); }
 .feed-item.issue .feed-text { color: var(--text-2); }

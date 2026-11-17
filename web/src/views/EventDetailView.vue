@@ -74,11 +74,13 @@ function startPress(it) {
 function cancelPress() {
   clearTimeout(pressTimer);
 }
-function onItemClick(it) {
+function onItemClick(e, it) {
   if (pressFired) {
     pressFired = false;
     return;
   }
+  // 行侧边「更多操作」触发器的点击归 popover 管,不进编辑
+  if (e?.target?.closest?.('.van-popover__wrapper')) return;
   openEdit(it);
 }
 async function removeItem(it) {
@@ -163,6 +165,19 @@ function copyAll() {
   copyText(lines.join('\n'));
 }
 const copyRow = (it) => copyText(it.content);
+
+// 行侧边操作菜单:带文字说明(解决裸按钮提示弱的问题),单按钮不占行宽
+const popoverKey = ref('');
+const rowActions = (it) => {
+  const a = [];
+  if (it.type === 't' && it.raw.subjectId) a.push({ key: 'subject', text: '进入对象 · ' + subjectStore.nameOf(it.raw.subjectId), icon: 'contact' });
+  a.push({ key: 'copy', text: '复制这条', icon: 'records' });
+  return a;
+};
+function onRowAction(a, it) {
+  if (a.key === 'subject') router.push(`/subjects/${it.raw.subjectId}`);
+  else if (a.key === 'copy') copyRow(it);
+}
 const loadMore = () => { limit.value += PAGE_SIZE; };
 
 const showNote = ref(false);
@@ -232,7 +247,7 @@ async function removeThread() {
         <div
           class="tl-item"
           :class="{ summary: it.summary, handled: it.handleStatus === 'done', issue: it.handleStatus === 'issue' }"
-          @click="onItemClick(it)"
+          @click="onItemClick($event, it)"
           @touchstart.passive="startPress(it)"
           @touchmove.passive="cancelPress"
           @touchend="cancelPress"
@@ -253,14 +268,18 @@ async function removeThread() {
               </span>
             </div>
           </div>
-          <!-- 绑定跳转:挂记绑了对象就能一键进对象页(模仿右侧复制按钮的侧边按钮) -->
-          <span
-            v-if="it.type === 't' && it.raw.subjectId"
-            class="row-jump"
-            title="进入绑定的对象"
-            @click.stop="router.push(`/subjects/${it.raw.subjectId}`)"
-          >@</span>
-          <van-icon name="records" class="row-copy" title="复制这条" @click.stop="copyRow(it)" />
+          <!-- 行侧边操作:单按钮弹出菜单(带文字说明,不占行宽) -->
+          <van-popover
+            :show="popoverKey === it.key"
+            placement="left"
+            :actions="rowActions(it)"
+            @select="(a) => onRowAction(a, it)"
+            @update:show="(v) => (popoverKey = v ? it.key : '')"
+          >
+            <template #reference>
+              <van-icon name="ellipsis" class="row-more" title="更多操作" />
+            </template>
+          </van-popover>
         </div>
       </div>
     </div>
@@ -311,8 +330,7 @@ async function removeThread() {
 .row-main { flex: 1; min-width: 0; }
 .tl-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .tl-item .van-icon { cursor: pointer; margin-top: 3px; flex: none; }
-.row-copy { color: var(--text-3); font-size: 15px; }
-.row-jump { color: var(--text-3); font-size: 14px; font-weight: 700; margin-top: 3px; flex: none; cursor: pointer; padding: 0 2px; }
+.row-more { color: var(--text-3); font-size: 16px; margin-top: 3px; flex: none; cursor: pointer; padding: 0 4px; }
 .tl-item.handled .tl-text { color: var(--text-3); }
 .tl-item.issue .tl-text { color: var(--text-2); }
 .handle-note { font-size: 12px; margin-top: 3px; color: var(--text-2); background: var(--card-2); border-radius: 6px; padding: 4px 8px; white-space: pre-wrap; word-break: break-word; }
