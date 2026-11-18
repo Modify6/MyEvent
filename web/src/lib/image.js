@@ -13,6 +13,13 @@ export function calcTargetSize(w, h, max = IMAGE_MAX_EDGE) {
   return { w: Math.round(W * k), h: Math.round(H * k) };
 }
 
+// 旋转后的宽高(90/270 互换)
+export function rotatedSize(w, h, angle) {
+  const a = ((Number(angle) || 0) % 360 + 360) % 360;
+  return a % 180 === 0 ? { w, h } : { w: h, h: w };
+}
+
+// 读取图片文件为 HTMLImageElement(供编辑器使用)
 function readAsImage(file) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -30,6 +37,8 @@ function readAsImage(file) {
 }
 
 // File/Blob → { data(base64 dataURL), w, h };非图片文件抛错
+export { readAsImage };
+
 export async function compressImage(file, max = IMAGE_MAX_EDGE, quality = IMAGE_QUALITY) {
   if (!file || !String(file.type || '').startsWith('image/')) throw new Error('请选择图片文件');
   const img = await readAsImage(file);

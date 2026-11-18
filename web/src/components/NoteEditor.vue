@@ -12,7 +12,7 @@ import VocabManage from './VocabManage.vue';
 import AttachGuide from './AttachGuide.vue';
 import { useVocabStore } from '../stores/vocab.js';
 import { useImageStore } from '../stores/image.js';
-import { compressImageList } from '../lib/image.js';
+import ImageEditor from './ImageEditor.vue';
 import { showImagePreview } from 'vant';
 import { toLocalInput, fromLocalInput } from '../lib/time.js';
 
@@ -34,20 +34,24 @@ const ownerTable = () => (props.entry ? 'eventEntries' : 'thoughts');
 const ownerId = () => (props.entry || props.thought)?.id || '';
 const myImages = computed(() => (ownerId() ? imageStore.byOwner(ownerTable(), ownerId()) : []));
 const fileRef = ref(null);
+const showEditor = ref(false);
+const editorQueue = ref([]);
 function pickFiles() {
   fileRef.value?.click();
 }
-async function onPickFiles(e) {
-  try {
-    const { images, errs } = await compressImageList(e.target.files);
-    for (const img of images) {
-      await imageStore.save({ ownerTable: ownerTable(), ownerId: ownerId(), data: img.data, w: img.w, h: img.h });
-    }
-    if (errs.length) showFailToast(errs[0]);
-  } catch (err) {
-    showFailToast(err.message);
-  }
+function onPickFiles(e) {
+  const files = Array.from(e.target.files || []);
   e.target.value = '';
+  if (!files.length) return;
+  editorQueue.value = files;
+  showEditor.value = true;
+}
+async function onEditorConfirm(results) {
+  for (const img of results) {
+    await imageStore.save({ ownerTable: ownerTable(), ownerId: ownerId(), data: img.data, w: img.w, h: img.h });
+  }
+  if (results.length) showSuccessToast(`已补 ${results.length} 张图`);
+  showEditor.value = false;
 }
 async function removeImage(im) {
   await imageStore.remove(im.id);
@@ -200,6 +204,7 @@ async function save() {
         </div>
         <button class="attach-btn" @click="pickFiles">🖼 补图</button>
         <input ref="fileRef" type="file" accept="image/*" multiple hidden @change="onPickFiles" />
+        <ImageEditor v-model:show="showEditor" :queue="editorQueue" @confirm="onEditorConfirm" />
       </div>
 
       <template v-if="!isEntry()">

@@ -7,7 +7,7 @@ import { useEventStore } from '../stores/event.js';
 import { useThoughtStore } from '../stores/thought.js';
 import { useVocabStore } from '../stores/vocab.js';
 import { useImageStore } from '../stores/image.js';
-import { compressImageList } from '../lib/image.js';
+import ImageEditor from './ImageEditor.vue';
 import { kindChipStyle, trigChipStyle } from '../lib/display.js';
 import { toLocalInput, fromLocalInput } from '../lib/time.js';
 import VocabQuickCreate from './VocabQuickCreate.vue';
@@ -42,18 +42,21 @@ function onVocabCreated(row) {
 // 附件图:选中即压缩暂存,保存成功后绑定到新记录
 const staged = ref([]);
 const fileRef = ref(null);
+const showEditor = ref(false);
+const editorQueue = ref([]);
 function pickFiles() {
   fileRef.value?.click();
 }
-async function onPickFiles(e) {
-  try {
-    const { images, errs } = await compressImageList(e.target.files);
-    staged.value.push(...images);
-    if (errs.length) showFailToast(errs[0]);
-  } catch (err) {
-    showFailToast(err.message);
-  }
+function onPickFiles(e) {
+  const files = Array.from(e.target.files || []);
   e.target.value = '';
+  if (!files.length) return;
+  editorQueue.value = files;
+  showEditor.value = true;
+}
+function onEditorConfirm(results) {
+  staged.value.push(...results);
+  showEditor.value = false;
 }
 function removeStaged(i) {
   staged.value.splice(i, 1);
@@ -135,6 +138,7 @@ async function save() {
       <div class="attach-row">
         <button class="attach-btn" @click="pickFiles">🖼 附加图</button>
         <input ref="fileRef" type="file" accept="image/*" multiple hidden @change="onPickFiles" />
+        <ImageEditor v-model:show="showEditor" :queue="editorQueue" @confirm="onEditorConfirm" />
         <div v-if="staged.length" class="staged-row">
           <div v-for="(img, i) in staged" :key="i" class="staged-th">
             <img :src="img.data" alt="" />

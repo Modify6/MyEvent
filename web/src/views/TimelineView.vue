@@ -10,7 +10,7 @@ import { useEventStore } from '../stores/event.js';
 import { useSubjectStore } from '../stores/subject.js';
 import { useVocabStore } from '../stores/vocab.js';
 import { useImageStore } from '../stores/image.js';
-import { compressImageList } from '../lib/image.js';
+import ImageEditor from '../components/ImageEditor.vue';
 import { showImagePreview } from 'vant';
 import FilterSortOptions from '../components/FilterSortOptions.vue';
 import { sortFilterOptions } from '../lib/util.js';
@@ -43,18 +43,21 @@ const detail = ref(false);
 // 附件图:暂存 → 随记录一起入库
 const staged = ref([]);
 const fileRef = ref(null);
+const showImgEditor = ref(false);
+const imgEditorQueue = ref([]);
 function pickFiles() {
   fileRef.value?.click();
 }
-async function onPickFiles(e) {
-  try {
-    const { images, errs } = await compressImageList(e.target.files);
-    staged.value.push(...images);
-    if (errs.length) showFailToast(errs[0]);
-  } catch (err) {
-    showFailToast(err.message);
-  }
+function onPickFiles(e) {
+  const files = Array.from(e.target.files || []);
   e.target.value = '';
+  if (!files.length) return;
+  imgEditorQueue.value = files;
+  showImgEditor.value = true;
+}
+function onEditorConfirm(results) {
+  staged.value.push(...results);
+  showImgEditor.value = false;
 }
 function removeStaged(i) {
   staged.value.splice(i, 1);
@@ -373,6 +376,7 @@ function openHandle(it) {
         <van-button size="small" plain round @click="detail = !detail">{{ detail ? '收起细节' : '添加细节' }}</van-button>
         <van-button size="small" plain round icon="photo-o" @click="pickFiles">图片</van-button>
         <input ref="fileRef" type="file" accept="image/*" multiple hidden @change="onPickFiles" />
+        <ImageEditor v-model:show="showImgEditor" :queue="imgEditorQueue" @confirm="onEditorConfirm" />
         <van-button type="primary" size="small" round icon="promotion" @click="quickSend">记下</van-button>
       </div>
       <template v-if="detail">
