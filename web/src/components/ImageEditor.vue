@@ -19,6 +19,7 @@ const mode = ref('free'); // 'free' | 'square'
 const idx = ref(0);
 const disp = ref({ w: 1, h: 1 }); // 预览图显示像素尺寸(映射基准)
 const results = ref([]);
+const peek = ref(false); // 按住「查看全图」时隐藏裁切遮罩,亮看整张原图
 let srcImg = null; // 当前文件的 HTMLImageElement
 let dragging = null; // { type:'box'|handle, startX, startY, orig:{x,y,w,h} }
 
@@ -37,12 +38,8 @@ function initCropSquare() {
   };
 }
 function initCropFree() {
-  crop.value = {
-    x: disp.value.w * 0.08,
-    y: disp.value.h * 0.08,
-    w: disp.value.w * 0.84,
-    h: disp.value.h * 0.84,
-  };
+  // 0.9.14:默认全图(不裁就不暗),需要裁再拖角点收缩
+  crop.value = { x: 0, y: 0, w: disp.value.w, h: disp.value.h };
 }
 
 // 旋转后的预览 dataURL(长边 ≤2048,只做展示;应用时按原图全分辨率裁切)
@@ -227,7 +224,7 @@ function resetCrop() {
       <div class="ed-stage" ref="stageRef">
         <div class="ed-imgwrap" ref="wrapRef">
           <img :src="previewUrl" class="ed-img" draggable="false" alt="" />
-          <div class="ed-crop" :style="cropStyle" @pointerdown="onBoxDown($event, 'box')">
+          <div v-if="!peek" class="ed-crop" :style="cropStyle" @pointerdown="onBoxDown($event, 'box')">
             <span class="ed-h tl" @pointerdown.stop="onBoxDown($event, 'tl')" />
             <span class="ed-h tr" @pointerdown.stop="onBoxDown($event, 'tr')" />
             <span class="ed-h bl" @pointerdown.stop="onBoxDown($event, 'bl')" />
@@ -242,12 +239,13 @@ function resetCrop() {
         <van-button size="small" plain round :type="mode === 'square' ? 'primary' : 'default'" @click="switchMode('square')">方形</van-button>
         <van-button size="small" plain round :type="mode === 'free' ? 'primary' : 'default'" @click="switchMode('free')">自由</van-button>
         <van-button size="small" plain round @click="resetCrop">重置</van-button>
+        <van-button size="small" plain round class="peek-btn" @pointerdown.prevent="peek = true" @pointerup="peek = false" @pointerleave="peek = false">查看全图</van-button>
       </div>
       <div class="ed-actions">
         <van-button size="small" plain round @click="skip">跳过此张</van-button>
         <van-button size="small" type="primary" round @click="apply">应用</van-button>
       </div>
-      <div class="muted ed-tip">拖动框选区域,角点调整大小;方形模式锁定 1:1;应用后自动压缩到长边 1280</div>
+      <div class="muted ed-tip">暗色区域将被裁掉;「重置」恢复全图,「查看全图」按住可亮看整张原图;应用后自动压缩到长边 1280</div>
     </div>
   </van-popup>
 </template>
@@ -267,4 +265,5 @@ function resetCrop() {
 .ed-tools { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 .ed-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
 .ed-tip { font-size: 11px; margin-top: 8px; text-align: center; }
+.peek-btn { color: var(--brand); border-color: var(--brand); }
 </style>
