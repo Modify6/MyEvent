@@ -38,18 +38,19 @@ const periodSelData = computed(() => {
     const r = periodSel.value === 'week' ? rangeFor('week', Date.now()) : rangeFor('month', Date.now());
     return x >= r.start && x < r.end;
   };
+  const withImgs = (arr, table) => arr.map((x) => ({ ...x, _imgs: imageStore.countOf(table, x.id) }));
   if (periodSel.value === 'all') {
     return {
       label: '全部历史',
-      thoughts: thoughtStore.active,
-      entries: eventStore.entries.filter((en) => !en.deleted),
+      thoughts: withImgs(thoughtStore.active, 'thoughts'),
+      entries: withImgs(eventStore.entries.filter((en) => !en.deleted), 'eventEntries'),
       events: eventStore.active,
     };
   }
   return {
     label: periodSel.value === 'week' ? '本周' : '本月',
-    thoughts: thoughtStore.active.filter((t) => inR(t.at || t.createdAt)),
-    entries: eventStore.entries.filter((en) => !en.deleted && inR(en.at)),
+    thoughts: withImgs(thoughtStore.active.filter((t) => inR(t.at || t.createdAt)), 'thoughts'),
+    entries: withImgs(eventStore.entries.filter((en) => !en.deleted && inR(en.at)), 'eventEntries'),
     events: eventStore.active.filter((e) => inR(e.startAt)),
   };
 });
@@ -66,8 +67,8 @@ const eventScopeData = computed(() => {
   const ev = props.event;
   if (!ev) return { entries: [], thoughts: [], subjects: [] };
   return {
-    entries: eventStore.entriesOf(ev.id),
-    thoughts: thoughtStore.ofEvent(ev.id),
+    entries: eventStore.entriesOf(ev.id).map((en) => ({ ...en, _imgs: imageStore.countOf('eventEntries', en.id) })),
+    thoughts: thoughtStore.ofEvent(ev.id).map((t) => ({ ...t, _imgs: imageStore.countOf('thoughts', t.id) })),
     subjects: (ev.subjectIds || []).map((sid) => ({ id: sid, name: subjectStore.nameOf(sid) })),
   };
 });

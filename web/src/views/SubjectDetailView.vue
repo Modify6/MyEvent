@@ -6,6 +6,7 @@ import { useRoute, useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 import { showConfirmDialog, showSuccessToast } from 'vant';
 import { useSubjectStore } from '../stores/subject.js';
+import { useImageStore } from '../stores/image.js';
 import { useEventStore } from '../stores/event.js';
 import { useThoughtStore } from '../stores/thought.js';
 import { usePredictionStore } from '../stores/prediction.js';
@@ -25,6 +26,7 @@ import { PREDICTION_VERIFIED } from '../lib/domain.js';
 const route = useRoute();
 const router = useRouter();
 const subjectStore = useSubjectStore();
+const imageStore = useImageStore();
 const eventStore = useEventStore();
 const thoughtStore = useThoughtStore();
 const predictionStore = usePredictionStore();
@@ -287,10 +289,12 @@ async function removeSubject() {
       :data="{
         events: subjectEvents.map((e) => ({
           ...e,
-          entries: eventStore.entriesOf(e.id),
-          hangThoughts: thoughtStore.active.filter((t) => t.relatedEventId === e.id && !t.subjectId),
+          entries: eventStore.entriesOf(e.id).map((en) => ({ ...en, _imgs: imageStore.countOf('eventEntries', en.id) })),
+          hangThoughts: thoughtStore.active
+            .filter((t) => t.relatedEventId === e.id && !t.subjectId)
+            .map((t) => ({ ...t, _imgs: imageStore.countOf('thoughts', t.id) })),
         })),
-        thoughts: thoughtStore.ofSubject(sid),
+        thoughts: thoughtStore.ofSubject(sid).map((t) => ({ ...t, _imgs: imageStore.countOf('thoughts', t.id) })),
         predictions: subjectPredictions,
       }"
       @saved="showAi = false"

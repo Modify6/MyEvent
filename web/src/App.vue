@@ -10,6 +10,8 @@ import { useRuleStore } from './stores/rule.js';
 import { useCatalogStore } from './stores/catalog.js';
 import { useFolderStore } from './stores/folder.js';
 import { useSyncStore } from './stores/sync.js';
+import { useVocabStore } from './stores/vocab.js';
+import { useImageStore } from './stores/image.js';
 import { isLoggedIn } from './auth/local.js';
 import { ensureSeed } from './db/schema.js';
 
@@ -21,6 +23,8 @@ const ruleStore = useRuleStore();
 const catalog = useCatalogStore();
 const folderStore = useFolderStore();
 const sync = useSyncStore();
+const vocabStore = useVocabStore();
+const imageStore = useImageStore();
 
 let unsubs = [];
 
@@ -33,6 +37,8 @@ onMounted(async () => {
     ruleStore.watch(),
     catalog.watch(),
     folderStore.watch(),
+    vocabStore.watch(),
+    imageStore.watch(),
   ];
   await ensureSeed();
   await Promise.all([
@@ -43,6 +49,8 @@ onMounted(async () => {
     ruleStore.load(),
     catalog.load(),
     folderStore.load(),
+    vocabStore.load(),
+    imageStore.load(),
   ]);
   if (isLoggedIn()) sync.setup();
   // 原生前台恢复 → 立即同步

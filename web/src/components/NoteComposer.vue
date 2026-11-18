@@ -6,6 +6,8 @@ import { showFailToast, showSuccessToast } from 'vant';
 import { useEventStore } from '../stores/event.js';
 import { useThoughtStore } from '../stores/thought.js';
 import { useVocabStore } from '../stores/vocab.js';
+import { useImageStore } from '../stores/image.js';
+import { compressImageList } from '../lib/image.js';
 import { kindChipStyle, trigChipStyle } from '../lib/display.js';
 import { toLocalInput, fromLocalInput } from '../lib/time.js';
 import VocabQuickCreate from './VocabQuickCreate.vue';
@@ -22,6 +24,7 @@ const emit = defineEmits(['update:show', 'saved']);
 const eventStore = useEventStore();
 const thoughtStore = useThoughtStore();
 const vocabStore = useVocabStore();
+const imageStore = useImageStore();
 const kind = ref('想法');
 const triggerKind = ref('');
 const more = ref(false);
@@ -36,6 +39,26 @@ function onVocabCreated(row) {
   else triggerKind.value = row.name;
 }
 
+// 附件图:选中即压缩暂存,保存成功后绑定到新记录
+const staged = ref([]);
+const fileRef = ref(null);
+function pickFiles() {
+  fileRef.value?.click();
+}
+async function onPickFiles(e) {
+  try {
+    const { images, errs } = await compressImageList(e.target.files);
+    staged.value.push(...images);
+    if (errs.length) showFailToast(errs[0]);
+  } catch (err) {
+    showFailToast(err.message);
+  }
+  e.target.value = '';
+}
+function removeStaged(i) {
+  staged.value.splice(i, 1);
+}
+
 watch(
   () => props.show,
   (v) => {
@@ -44,6 +67,7 @@ watch(
     kind.value = '想法';
     triggerKind.value = '';
     more.value = false;
+    staged.value = [];
   }
 );
 
@@ -76,7 +100,12 @@ async function save() {
         at,
       });
     }
-    showSuccessToast(props.summaryMode ? '小结已记下' : '已记录');
+    for (const img of staged.value) {
+      await imageStore.save({ ownerTable: props.eventId ? 'eventEntries' : 'thoughts', ownerId: row.id, data: img.data, w: img.w, h: img.h });
+    }
+    if (staged.value.length) showSuccessToast(`已记录 + ${staged.value.length} 张图`);
+    else showSuccessToast(props.summaryMode ? '小结已记下' : '已记录');
+    staged.value = [];
     emit('saved', row);
     emit('update:show', false);
   } catch (e) {
@@ -101,6 +130,18 @@ async function save() {
         autosize
         :placeholder="summaryMode ? '这阵子的收获/教训/规律,用自己的话…' : '这条记录的内容 *'"
       />
+
+      <!-- 附件图:选择即压缩暂存,保存后绑定到新记录 -->
+      <div class="attach-row">
+        <button class="attach-btn" @click="pickFiles">🖼 附加图</button>
+        <input ref="fileRef" type="file" accept="image/*" multiple hidden @change="onPickFiles" />
+        <div v-if="staged.length" class="staged-row">
+          <div v-for="(img, i) in staged" :key="i" class="staged-th">
+            <img :src="img.data" alt="" />
+            <span class="staged-x" @click="removeStaged(i)">✕</span>
+          </div>
+        </div>
+      </div>
 
       <template v-if="!summaryMode">
         <template v-if="!eventId">
@@ -151,4 +192,10 @@ async function save() {
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 2px; }
 .tag-chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 13px; font-size: 12px; color: var(--text-2); }
 .tag-chip.active { border-color: var(--brand); color: var(--brand); font-weight: 600; background: color-mix(in srgb, var(--brand) 8%, transparent); }
+.attach-row { margin: 10px 2px 0; }
+.attach-btn { border: 1px dashed var(--line); background: var(--card); border-radius: 999px; padding: 6px 14px; font-size: 12px; color: var(--text-2); cursor: pointer; }
+.staged-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.staged-th { position: relative; width: 56px; height: 56px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+.staged-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.staged-x { position: absolute; top: 0; right: 0; width: 18px; height: 18px; background: rgba(0,0,0,0.55); color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 0 0 0 8px; }
 </style>

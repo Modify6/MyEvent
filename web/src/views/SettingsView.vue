@@ -16,7 +16,7 @@ import SyncDot from '../components/SyncDot.vue';
 import AppGuide from '../components/AppGuide.vue';
 import VersionHistory from '../components/VersionHistory.vue';
 
-const DATA_TABLES = ['categories', 'events', 'subjects', 'thoughts', 'predictions', 'rules', 'eventEntries'];
+const DATA_TABLES = ['categories', 'events', 'subjects', 'thoughts', 'predictions', 'rules', 'eventEntries', 'folders', 'vocab', 'images'];
 
 import { useVocabStore } from '../stores/vocab.js';
 import VocabManage from '../components/VocabManage.vue';

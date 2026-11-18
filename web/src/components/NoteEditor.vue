@@ -11,6 +11,9 @@ import VocabQuickCreate from './VocabQuickCreate.vue';
 import VocabManage from './VocabManage.vue';
 import AttachGuide from './AttachGuide.vue';
 import { useVocabStore } from '../stores/vocab.js';
+import { useImageStore } from '../stores/image.js';
+import { compressImageList } from '../lib/image.js';
+import { showImagePreview } from 'vant';
 import { toLocalInput, fromLocalInput } from '../lib/time.js';
 
 const props = defineProps({
@@ -24,7 +27,34 @@ const eventStore = useEventStore();
 const thoughtStore = useThoughtStore();
 const subjectStore = useSubjectStore();
 const vocabStore = useVocabStore();
+const imageStore = useImageStore();
 const showHistory = ref(false);
+// 附件图:已有图可删,可补图(直接入库绑定当前记录);thought/entry 通用
+const ownerTable = () => (props.entry ? 'eventEntries' : 'thoughts');
+const ownerId = () => (props.entry || props.thought)?.id || '';
+const myImages = computed(() => (ownerId() ? imageStore.byOwner(ownerTable(), ownerId()) : []));
+const fileRef = ref(null);
+function pickFiles() {
+  fileRef.value?.click();
+}
+async function onPickFiles(e) {
+  try {
+    const { images, errs } = await compressImageList(e.target.files);
+    for (const img of images) {
+      await imageStore.save({ ownerTable: ownerTable(), ownerId: ownerId(), data: img.data, w: img.w, h: img.h });
+    }
+    if (errs.length) showFailToast(errs[0]);
+  } catch (err) {
+    showFailToast(err.message);
+  }
+  e.target.value = '';
+}
+async function removeImage(im) {
+  await imageStore.remove(im.id);
+}
+function previewImages(imgs, idx) {
+  showImagePreview({ images: imgs.map((x) => x.data), startPosition: idx, closeable: true });
+}
 const form = reactive({
   content: '', kind: '', triggerKind: '', triggerNote: '', at: '',
   subjectId: '', eventId: '',
@@ -160,6 +190,18 @@ async function save() {
 
       <van-field v-model="form.content" type="textarea" rows="3" autosize placeholder="修改后的内容 *" />
 
+      <!-- 附件图:已有图可删/预览,可补图 -->
+      <div v-if="myImages.length || ownerId()" class="attach-row">
+        <div v-if="myImages.length" class="staged-row">
+          <div v-for="im in myImages" :key="im.id" class="staged-th">
+            <img :src="im.data" alt="" @click="previewImages(myImages, myImages.indexOf(im))" />
+            <span class="staged-x" @click="removeImage(im)">✕</span>
+          </div>
+        </div>
+        <button class="attach-btn" @click="pickFiles">🖼 补图</button>
+        <input ref="fileRef" type="file" accept="image/*" multiple hidden @change="onPickFiles" />
+      </div>
+
       <template v-if="!isEntry()">
         <div class="block-label row-between"><span>类型</span><span class="manage-link" @click="vocabManageScope = 'kind'; showVocabManage = true">管理</span></div>
         <div class="chip-row">
@@ -240,4 +282,10 @@ async function save() {
 .history-item { padding: 6px 0; border-bottom: 1px dashed var(--line); }
 .history-item:last-child { border-bottom: 0; }
 .history-text { font-size: 13px; color: var(--text-2); margin-top: 2px; white-space: pre-wrap; word-break: break-word; }
+  .attach-row { margin: 10px 2px 0; }
+  .attach-btn { border: 1px dashed var(--line); background: var(--card); border-radius: 999px; padding: 6px 14px; font-size: 12px; color: var(--text-2); cursor: pointer; }
+  .staged-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .staged-th { position: relative; width: 56px; height: 56px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+  .staged-th img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: pointer; }
+  .staged-x { position: absolute; top: 0; right: 0; width: 18px; height: 18px; background: rgba(0,0,0,0.55); color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 0 0 0 8px; }
 </style>

@@ -36,13 +36,14 @@ export const TABLES = {
   ],
   folders: ['id', 'name', 'color', 'sort', 'scope', 'createdAt', 'updatedAt', 'deleted'],
   vocab: ['id', 'type', 'name', 'color', 'icon', 'sort', 'createdAt', 'updatedAt', 'deleted'],
+  images: ['id', 'ownerTable', 'ownerId', 'data', 'w', 'h', 'sort', 'createdAt', 'updatedAt', 'deleted'],
 };
 
 const INT_COLS = new Set([
   'sort', 'createdAt', 'updatedAt', 'deleted', 'startAt', 'endAt', 'reviewedAt',
   'currentConfidence', 'nextReviewAt', 'at', 'confidence',
   'madeAt', 'windowStart', 'windowEnd', 'origConfidence', 'lockedAt', 'verifiedAt',
-  'verifyCount', 'lastVerifiedAt', 'handledAt',
+  'verifyCount', 'lastVerifiedAt', 'handledAt', 'w', 'h',
 ]);
 
 // 以 JSON 字符串存储的数组/对象列（与 web/src/db/repo.js JSON_COLS 对应，白名单交集为准）

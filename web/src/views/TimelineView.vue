@@ -9,6 +9,9 @@ import { useThoughtStore } from '../stores/thought.js';
 import { useEventStore } from '../stores/event.js';
 import { useSubjectStore } from '../stores/subject.js';
 import { useVocabStore } from '../stores/vocab.js';
+import { useImageStore } from '../stores/image.js';
+import { compressImageList } from '../lib/image.js';
+import { showImagePreview } from 'vant';
 import FilterSortOptions from '../components/FilterSortOptions.vue';
 import { sortFilterOptions } from '../lib/util.js';
 import NoteEditor from '../components/NoteEditor.vue';
@@ -31,11 +34,31 @@ const thoughtStore = useThoughtStore();
 const eventStore = useEventStore();
 const subjectStore = useSubjectStore();
 const vocabStore = useVocabStore();
+const imageStore = useImageStore();
 
 // —— 快捷输入(内联,最快路径:内容 + 发送) ——
 const kind = ref('想法');
 const triggerKind = ref('');
 const detail = ref(false);
+// 附件图:暂存 → 随记录一起入库
+const staged = ref([]);
+const fileRef = ref(null);
+function pickFiles() {
+  fileRef.value?.click();
+}
+async function onPickFiles(e) {
+  try {
+    const { images, errs } = await compressImageList(e.target.files);
+    staged.value.push(...images);
+    if (errs.length) showFailToast(errs[0]);
+  } catch (err) {
+    showFailToast(err.message);
+  }
+  e.target.value = '';
+}
+function removeStaged(i) {
+  staged.value.splice(i, 1);
+}
 const form = reactive({ content: '', triggerNote: '', subjectId: '', eventId: '' });
 
 // 高频手感:一键重挂上次的挂靠组合
@@ -54,15 +77,19 @@ async function quickSend() {
     const src = triggerKind.value
       ? `由${triggerKind.value}触发${form.triggerNote ? ':' + form.triggerNote : ''}`
       : form.triggerNote;
-    await thoughtStore.quickAdd({
+    const row = await thoughtStore.quickAdd({
       content: form.content,
       kind: kind.value,
       subjectId: form.subjectId,
       relatedEventId: form.eventId,
       source: src,
     });
+    for (const img of staged.value) {
+      await imageStore.save({ ownerTable: 'thoughts', ownerId: row.id, data: img.data, w: img.w, h: img.h });
+    }
     form.content = '';
     form.triggerNote = '';
+    staged.value = [];
     if (form.subjectId || form.eventId) setLastAttach({ subjectId: form.subjectId, eventId: form.eventId });
     showSuccessToast('已记录');
     // 连续记录:发送后焦点回到输入框
@@ -122,6 +149,7 @@ const allItems = computed(() => {
       trigger: t.source || '', summary: false, edited: (t.edits || []).length > 0,
       subjectId: t.subjectId || '', eventId: t.relatedEventId || '',
       handleStatus: t.handleStatus || 'pending', handleNote: t.handleNote || '',
+      images: imageStore.byOwner('thoughts', t.id),
     });
   }
   for (const en of eventStore.entries) {
@@ -132,6 +160,7 @@ const allItems = computed(() => {
       summary: en.kind === 'summary', edited: (en.edits || []).length > 0,
       subjectId: (eventStore.byId(en.eventId)?.subjectIds || [])[0] || '', eventId: en.eventId,
       handleStatus: en.handleStatus || 'pending', handleNote: en.handleNote || '',
+      images: imageStore.byOwner('eventEntries', en.id),
     });
   }
   return items.sort((a, b) => b.at - a.at);
@@ -184,6 +213,10 @@ const subjectName = (id) => subjectStore.nameOf(id);
 const eventTitle = (id) => eventStore.byId(id)?.title || '线索';
 // 一键复制这条记录的原文
 const copyRow = (it) => copyText(it.content);
+// 缩略图点击 → 全屏预览整组图
+function previewImages(imgs, idx) {
+  showImagePreview({ images: imgs.map((x) => x.data), startPosition: idx, closeable: true });
+}
 
 // 行侧边操作菜单:带文字说明(解决裸按钮提示弱的问题),单按钮不占行宽
 const popoverKey = ref('');
@@ -330,8 +363,16 @@ function openHandle(it) {
         class="quick-input"
         @keydown.enter.exact.prevent="quickSend"
       />
+      <div v-if="staged.length" class="staged-row">
+        <div v-for="(img, i) in staged" :key="i" class="staged-th">
+          <img :src="img.data" alt="" />
+          <span class="staged-x" @click="removeStaged(i)">✕</span>
+        </div>
+      </div>
       <div class="quick-foot">
         <van-button size="small" plain round @click="detail = !detail">{{ detail ? '收起细节' : '添加细节' }}</van-button>
+        <van-button size="small" plain round icon="photo-o" @click="pickFiles">图片</van-button>
+        <input ref="fileRef" type="file" accept="image/*" multiple hidden @change="onPickFiles" />
         <van-button type="primary" size="small" round icon="promotion" @click="quickSend">记下</van-button>
       </div>
       <template v-if="detail">
@@ -398,6 +439,9 @@ function openHandle(it) {
             <div class="row-main">
               <div class="feed-text">{{ it.content }}</div>
               <div v-if="it.handleStatus !== 'pending' && it.handleNote" class="handle-note">{{ HANDLE_STATUS_META[it.handleStatus].label }}:{{ it.handleNote }}</div>
+              <div v-if="it.images?.length" class="th-row">
+                <img v-for="(im, i) in it.images" :key="im.id" :src="im.data" class="th-img" alt="" @click.stop="previewImages(it.images, i)" />
+              </div>
               <div class="muted">
                 {{ fmtTime(it.at) }}
                 <template v-if="it.edited"> · ✎ 已编辑</template>
@@ -490,6 +534,12 @@ function openHandle(it) {
 .trig { color: var(--text-2); }
 .row-main { flex: 1; min-width: 0; }
 .row-more { color: var(--text-3); font-size: 16px; margin-top: 4px; flex: none; cursor: pointer; padding: 0 4px; }
+.staged-row { display: flex; gap: 8px; margin: 8px 2px 0; flex-wrap: wrap; }
+.staged-th { position: relative; width: 56px; height: 56px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+.staged-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.staged-x { position: absolute; top: 0; right: 0; width: 18px; height: 18px; background: rgba(0,0,0,0.55); color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 0 0 0 8px; }
+.th-row { display: flex; gap: 6px; margin-top: 6px; overflow-x: auto; }
+.th-img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); cursor: pointer; flex: none; }
 .feed-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .feed-item.handled .feed-text { color: var(--text-3); }
 .feed-item.issue .feed-text { color: var(--text-2); }

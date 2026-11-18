@@ -4,10 +4,11 @@
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import dayjs from 'dayjs';
-import { showConfirmDialog, showSuccessToast } from 'vant';
+import { showConfirmDialog, showImagePreview, showSuccessToast } from 'vant';
 import { useEventStore } from '../stores/event.js';
 import { useThoughtStore } from '../stores/thought.js';
 import { useSubjectStore } from '../stores/subject.js';
+import { useImageStore } from '../stores/image.js';
 import { useVocabStore } from '../stores/vocab.js';
 import { useCatalogStore } from '../stores/catalog.js';
 import NoteComposer from '../components/NoteComposer.vue';
@@ -26,6 +27,7 @@ const eventStore = useEventStore();
 const thoughtStore = useThoughtStore();
 const subjectStore = useSubjectStore();
 const vocabStore = useVocabStore();
+const imageStore = useImageStore();
 const catalog = useCatalogStore();
 
 const eid = computed(() => route.params.id);
@@ -40,6 +42,7 @@ const timeline = computed(() => {
       content: en.content, at: en.at, edited: (en.edits || []).length > 0,
       trigger: en.triggerKind ? `由${en.triggerKind}触发${en.triggerNote ? ':' + en.triggerNote : ''}` : (en.triggerNote || ''),
       handleStatus: en.handleStatus || 'pending', handleNote: en.handleNote || '',
+      images: imageStore.byOwner('eventEntries', en.id),
     });
   }
   for (const t of thoughtStore.ofEvent(eid.value)) {
@@ -48,6 +51,7 @@ const timeline = computed(() => {
       content: t.content, at: t.at, edited: (t.edits || []).length > 0,
       trigger: t.source || '',
       handleStatus: t.handleStatus || 'pending', handleNote: t.handleNote || '',
+      images: imageStore.byOwner('thoughts', t.id),
     });
   }
   return items.sort((a, b) => b.at - a.at);
@@ -166,6 +170,10 @@ function copyAll() {
   copyText(lines.join('\n'));
 }
 const copyRow = (it) => copyText(it.content);
+// 缩略图点击 → 全屏预览整组图
+function previewImages(imgs, idx) {
+  showImagePreview({ images: imgs.map((x) => x.data), startPosition: idx, closeable: true });
+}
 
 // 行侧边操作菜单:带文字说明(解决裸按钮提示弱的问题),单按钮不占行宽
 const popoverKey = ref('');
@@ -272,6 +280,9 @@ async function removeThread() {
           <div class="tl-kind" :style="kindStyle(it.kind)">{{ kindIcon(it.kind) }}</div>
           <div class="row-main">
             <div class="tl-text">{{ it.content }}</div>
+            <div v-if="it.images?.length" class="th-row">
+              <img v-for="(im, i) in it.images" :key="im.id" :src="im.data" class="th-img" alt="" @click.stop="previewImages(it.images, i)" />
+            </div>
             <div v-if="it.handleStatus !== 'pending' && it.handleNote" class="handle-note">{{ HANDLE_STATUS_META[it.handleStatus].label }}:{{ it.handleNote }}</div>
             <div class="muted">
               {{ it.kind }} · {{ fmtDate(it.at) }} {{ fmtTime(it.at) }}
@@ -358,6 +369,8 @@ async function removeThread() {
 .tl-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .tl-item .van-icon { cursor: pointer; margin-top: 3px; flex: none; }
 .row-more { color: var(--text-3); font-size: 16px; margin-top: 3px; flex: none; cursor: pointer; padding: 0 4px; }
+.th-row { display: flex; gap: 6px; margin-top: 6px; overflow-x: auto; }
+.th-img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); cursor: pointer; flex: none; }
 .tl-item.handled .tl-text { color: var(--text-3); }
 .tl-item.issue .tl-text { color: var(--text-2); }
 .handle-note { font-size: 12px; margin-top: 3px; color: var(--text-2); background: var(--card-2); border-radius: 6px; padding: 4px 8px; white-space: pre-wrap; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }

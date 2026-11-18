@@ -7,6 +7,7 @@ import { useEventStore } from '../stores/event.js';
 import { useThoughtStore } from '../stores/thought.js';
 import { usePredictionStore } from '../stores/prediction.js';
 import { useCatalogStore } from '../stores/catalog.js';
+import { useImageStore } from '../stores/image.js';
 import { calibrationBuckets, PREDICTION_VERIFIED, PREDICTION_KINDS } from '../lib/domain.js';
 import { TRIGGER_ICON } from '../lib/display.js';
 import { rangeFor, shiftCursor, weekRange, fmtDate } from '../lib/time.js';
@@ -17,6 +18,7 @@ const eventStore = useEventStore();
 const thoughtStore = useThoughtStore();
 const predictionStore = usePredictionStore();
 const catalog = useCatalogStore();
+const imageStore = useImageStore();
 
 // 周/月视图:可左右切换;月视图额外给出与上月的对比
 const period = ref('week');

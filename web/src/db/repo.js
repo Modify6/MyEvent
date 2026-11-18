@@ -134,6 +134,7 @@ export const getAllRules = () => db.rules.toArray();
 export const getAllEventEntries = () => db.eventEntries.toArray();
 export const getAllFolders = () => db.folders.filter((x) => !x.deleted).toArray();
 export const getAllVocab = () => db.vocab.filter((x) => !x.deleted).toArray();
+export const getAllImages = () => db.images.filter((x) => !x.deleted).toArray();
 
 export const getAllEvents = () => db.events.filter((e) => !e.deleted).toArray();
 

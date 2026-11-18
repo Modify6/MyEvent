@@ -97,6 +97,23 @@ db.version(6).stores({
   logs: '++id, at',
 });
 
+// v7:图片附件——挂在记录(thoughts)或过程记录(eventEntries)下,base64 压缩图随同步上云
+db.version(7).stores({
+  events: 'id, categoryId, threadState, folderId, updatedAt, createdAt, deleted',
+  categories: 'id, sort, updatedAt, deleted',
+  subjects: 'id, type, folderId, createdAt, updatedAt, deleted',
+  thoughts: 'id, subjectId, kind, state, at, createdAt, updatedAt, deleted',
+  predictions: 'id, subjectId, kind, status, windowEnd, verifiedAt, createdAt, updatedAt, deleted',
+  rules: 'id, validity, scene, createdAt, updatedAt, deleted',
+  eventEntries: 'id, eventId, at, createdAt, updatedAt, deleted',
+  folders: 'id, sort, updatedAt, deleted',
+  images: 'id, ownerTable, ownerId, sort, updatedAt, deleted',
+  vocab: 'id, type, sort, updatedAt, deleted',
+  outbox: '++seq, key',
+  meta: 'key',
+  logs: '++id, at',
+});
+
 // 供 E2E 数据库级断言（Playwright）
 if (typeof window !== 'undefined') window.__myeventDebug = { db };
 

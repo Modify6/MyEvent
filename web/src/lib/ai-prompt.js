@@ -9,6 +9,8 @@ const clip = (s, n = 150) => {
   return t.length > n ? t.slice(0, n) + '…' : t;
 };
 const fmt = (at) => dayjs(at).format('YYYY-MM-DD');
+// 图片在提示词中以占位出现(图片本身不发 AI)
+const imgTag = (row) => (row._imgs ? ` [附图×${row._imgs}]` : '');
 const THREAD_LABEL = { open: '进行中', done: '已完结', shelved: '已搁置', issue: '有问题' };
 
 // 六段分析指令:AI 按此框架输出,用户粘贴回存后即为结构化复盘
@@ -40,10 +42,10 @@ const HEAD = (title) => `# ${title}\n\n以下是我的原始记录数据。请�
 const eventSubLines = (e) => {
   const sub = [];
   for (const en of (e.entries || []).slice(0, 20)) {
-    sub.push(`  · [${fmt(en.at)}] ${en.kind === 'summary' ? '小结' : '记录'}: ${clip(en.content)}`);
+    sub.push(`  · [${fmt(en.at)}] ${en.kind === 'summary' ? '小结' : '记录'}: ${clip(en.content)}${imgTag(en)}`);
   }
   for (const t of (e.hangThoughts || []).slice(0, 20)) {
-    sub.push(`  · [${fmt(t.at)}] 挂记(${t.kind || '想法'}): ${clip(t.content)}`);
+    sub.push(`  · [${fmt(t.at)}] 挂记(${t.kind || '想法'}): ${clip(t.content)}${imgTag(t)}`);
   }
   const extra = ((e.entries || []).length > 20 || (e.hangThoughts || []).length > 20)
     ? [`  (该线索另有 ${Math.max(0, (e.entries || []).length - 20) + Math.max(0, (e.hangThoughts || []).length - 20)} 条未附)`]
@@ -77,7 +79,7 @@ ${evLines.join('\n')}${evs.length > 20 ? `\n(另有 ${evs.length - 20} 条更早
   const ths = [...thoughts].sort((a, b) => (b.at || 0) - (a.at || 0));
   if (ths.length) {
     parts.push(`## 直接挂在对象下的记录(${Math.min(ths.length, 60)}/${ths.length} 条,按时间倒序)
-${ths.slice(0, 60).map((t) => `- [${fmt(t.at)}] ${t.kind || '想法'}: ${clip(t.content)}`).join('\n')}${ths.length > 60 ? `\n(另有 ${ths.length - 60} 条更早记录未附)` : ''}`);
+${ths.slice(0, 60).map((t) => `- [${fmt(t.at)}] ${t.kind || '想法'}: ${clip(t.content)}${imgTag(t)}`).join('\n')}${ths.length > 60 ? `\n(另有 ${ths.length - 60} 条更早记录未附)` : ''}`);
   }
 
   const preds = [...predictions].sort((a, b) => (b.madeAt || 0) - (a.madeAt || 0));
@@ -97,12 +99,12 @@ export function buildPeriodPrompt(label, { thoughts = [], entries = [], events =
   const ths = [...thoughts].sort((a, b) => (b.at || 0) - (a.at || 0));
   const ens = [...entries].sort((a, b) => (b.at || 0) - (a.at || 0));
   const all = [
-    ...ths.map((t) => ({ at: t.at, kind: t.kind || '想法', content: t.content })),
-    ...ens.map((en) => ({ at: en.at, kind: en.kind === 'summary' ? '小结' : '记录', content: en.content })),
+    ...ths.map((t) => ({ at: t.at, kind: t.kind || '想法', content: t.content, _imgs: t._imgs })),
+    ...ens.map((en) => ({ at: en.at, kind: en.kind === 'summary' ? '小结' : '记录', content: en.content, _imgs: en._imgs })),
   ].sort((a, b) => b.at - a.at);
   if (all.length) {
     parts.push(`## 本周期记录(${Math.min(all.length, 80)}/${all.length} 条,按时间倒序)
-${all.slice(0, 80).map((x) => `- [${fmt(x.at)}] ${x.kind}: ${clip(x.content)}`).join('\n')}${all.length > 80 ? `\n(另有 ${all.length - 80} 条未附)` : ''}`);
+${all.slice(0, 80).map((x) => `- [${fmt(x.at)}] ${x.kind}: ${clip(x.content)}${imgTag(x)}`).join('\n')}${all.length > 80 ? `\n(另有 ${all.length - 80} 条未附)` : ''}`);
   } else {
     parts.push('## 本周期记录\n(本周期暂无记录)');
   }
@@ -131,12 +133,12 @@ export function buildEventPrompt(event, { entries = [], thoughts = [], subjects 
 - 一句话事实: ${clip(event?.fact, 200) || '(未填)'}`);
 
   const all = [
-    ...ens.map((en) => ({ at: en.at, kind: en.kind === 'summary' ? '小结' : '记录', content: en.content })),
-    ...ths.map((t) => ({ at: t.at, kind: `挂记(${t.kind || '想法'})`, content: t.content })),
+    ...ens.map((en) => ({ at: en.at, kind: en.kind === 'summary' ? '小结' : '记录', content: en.content, _imgs: en._imgs })),
+    ...ths.map((t) => ({ at: t.at, kind: `挂记(${t.kind || '想法'})`, content: t.content, _imgs: t._imgs })),
   ].sort((a, b) => b.at - a.at);
   if (all.length) {
     parts.push(`## 过程时间线(${Math.min(all.length, 100)}/${all.length} 条,按时间倒序)
-${all.slice(0, 100).map((x) => `- [${fmt(x.at)}] ${x.kind}: ${clip(x.content)}`).join('\n')}${all.length > 100 ? `\n(另有 ${all.length - 100} 条未附)` : ''}`);
+${all.slice(0, 100).map((x) => `- [${fmt(x.at)}] ${x.kind}: ${clip(x.content)}${imgTag(x)}`).join('\n')}${all.length > 100 ? `\n(另有 ${all.length - 100} 条未附)` : ''}`);
   } else {
     parts.push('## 过程时间线\n(该线索暂无过程记录)');
   }
