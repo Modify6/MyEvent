@@ -4,7 +4,7 @@
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import dayjs from 'dayjs';
-import { showConfirmDialog, showImagePreview, showSuccessToast } from 'vant';
+import { showConfirmDialog, showSuccessToast } from 'vant';
 import { useEventStore } from '../stores/event.js';
 import { useThoughtStore } from '../stores/thought.js';
 import { useSubjectStore } from '../stores/subject.js';
@@ -16,6 +16,7 @@ import NoteEditor from '../components/NoteEditor.vue';
 import ThreadEditor from '../components/ThreadEditor.vue';
 import HandleStatusSheet from '../components/HandleStatusSheet.vue';
 import AiInventory from '../components/AiInventory.vue';
+import ImgPreviewOverlay from '../components/ImgPreviewOverlay.vue';
 import StatusTag from '../components/StatusTag.vue';
 import { kindMeta, parseTrigger, avatarColor } from '../lib/display.js';
 import { fmtDate, fmtTime } from '../lib/time.js';
@@ -171,8 +172,10 @@ function copyAll() {
 }
 const copyRow = (it) => copyText(it.content);
 // 缩略图点击 → 全屏预览整组图
+// 全屏预览(自研 overlay)
+const previewState = ref(null);
 function previewImages(imgs, idx) {
-  showImagePreview({ images: imgs.map((x) => x.data), startPosition: idx, closeable: true });
+  previewState.value = { images: imgs.map((x) => x.data), start: idx };
 }
 
 // 行侧边操作菜单:带文字说明(解决裸按钮提示弱的问题),单按钮不占行宽
@@ -325,6 +328,7 @@ async function removeThread() {
     </div>
     <div v-else-if="!timelineFiltered.length" class="card"><div class="empty-tip">{{ timeline.length ? '这个过滤下没有记录' : '还没有过程记录 —— 点「记一笔」开始记录变化过程' }}</div></div>
 
+    <ImgPreviewOverlay :show="!!previewState" :images="previewState?.images || []" :start="previewState?.start || 0" @close="previewState = null" />
     <NoteComposer v-model:show="showNote" :event-id="eid" />
     <NoteComposer v-model:show="showSummary" :event-id="eid" summary-mode />
     <NoteEditor v-model:show="showEditor" :thought="editItem?.type === 't' ? editItem.raw : null" :entry="editItem?.type === 'e' ? editItem.raw : null" @saved="editItem = null" />

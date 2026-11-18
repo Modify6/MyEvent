@@ -13,7 +13,8 @@ import AttachGuide from './AttachGuide.vue';
 import { useVocabStore } from '../stores/vocab.js';
 import { useImageStore } from '../stores/image.js';
 import ImageEditor from './ImageEditor.vue';
-import { showImagePreview } from 'vant';
+import ImgPreviewOverlay from './ImgPreviewOverlay.vue';
+const preview = ref(null);
 import { toLocalInput, fromLocalInput } from '../lib/time.js';
 
 const props = defineProps({
@@ -57,7 +58,7 @@ async function removeImage(im) {
   await imageStore.remove(im.id);
 }
 function previewImages(imgs, idx) {
-  showImagePreview({ images: imgs.map((x) => x.data), startPosition: idx, closeable: true });
+  preview.value = { images: imgs.map((x) => x.data), start: idx };
 }
 const form = reactive({
   content: '', kind: '', triggerKind: '', triggerNote: '', at: '',
@@ -194,18 +195,19 @@ async function save() {
 
       <van-field v-model="form.content" type="textarea" rows="3" autosize placeholder="修改后的内容 *" />
 
-      <!-- 附件图:已有图可删/预览,可补图 -->
-      <div v-if="myImages.length || ownerId()" class="attach-row">
-        <div v-if="myImages.length" class="staged-row">
-          <div v-for="im in myImages" :key="im.id" class="staged-th">
-            <img :src="im.data" alt="" @click="previewImages(myImages, myImages.indexOf(im))" />
-            <span class="staged-x" @click="removeImage(im)">✕</span>
-          </div>
+      <!-- 附件图:已有图可删/预览,可补图(3 列网格) -->
+      <div v-if="ownerId()" class="attach-grid">
+        <div v-for="im in myImages" :key="im.id" class="attach-th">
+          <img :src="im.data" alt="" @click="previewImages(myImages, myImages.indexOf(im))" />
+          <span class="attach-x" @click="removeImage(im)">✕</span>
         </div>
-        <button class="attach-btn" @click="pickFiles">🖼 补图</button>
+        <div class="attach-add" @click="pickFiles">
+          <van-icon name="plus" /><span>补图</span>
+        </div>
         <input ref="fileRef" type="file" accept="image/*" multiple hidden @change="onPickFiles" />
         <ImageEditor v-model:show="showEditor" :queue="editorQueue" @confirm="onEditorConfirm" />
       </div>
+      <ImgPreviewOverlay :show="!!preview" :images="preview?.images || []" :start="preview?.start || 0" @close="preview = null" />
 
       <template v-if="!isEntry()">
         <div class="block-label row-between"><span>类型</span><span class="manage-link" @click="vocabManageScope = 'kind'; showVocabManage = true">管理</span></div>
@@ -287,10 +289,10 @@ async function save() {
 .history-item { padding: 6px 0; border-bottom: 1px dashed var(--line); }
 .history-item:last-child { border-bottom: 0; }
 .history-text { font-size: 13px; color: var(--text-2); margin-top: 2px; white-space: pre-wrap; word-break: break-word; }
-  .attach-row { margin: 10px 2px 0; }
-  .attach-btn { border: 1px dashed var(--line); background: var(--card); border-radius: 999px; padding: 6px 14px; font-size: 12px; color: var(--text-2); cursor: pointer; }
-  .staged-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-  .staged-th { position: relative; width: 56px; height: 56px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
-  .staged-th img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: pointer; }
-  .staged-x { position: absolute; top: 0; right: 0; width: 18px; height: 18px; background: rgba(0,0,0,0.55); color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 0 0 0 8px; }
+  .attach-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 2px 0; }
+  .attach-th { position: relative; aspect-ratio: 1/1; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+  .attach-th img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: pointer; }
+  .attach-x { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; background: rgba(0,0,0,0.6); color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 50%; }
+  .attach-add { aspect-ratio: 1/1; border: 1px dashed var(--line); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--text-3); font-size: 12px; cursor: pointer; background: var(--card); }
+  .attach-add .van-icon { font-size: 20px; }
 </style>

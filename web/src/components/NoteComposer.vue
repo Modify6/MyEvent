@@ -134,17 +134,17 @@ async function save() {
         :placeholder="summaryMode ? '这阵子的收获/教训/规律,用自己的话…' : '这条记录的内容 *'"
       />
 
-      <!-- 附件图:选择即压缩暂存,保存后绑定到新记录 -->
-      <div class="attach-row">
-        <button class="attach-btn" @click="pickFiles">🖼 附加图</button>
+      <!-- 附件图:选择即压缩暂存,保存后绑定到新记录(3 列网格) -->
+      <div class="attach-grid">
+        <div v-for="(img, i) in staged" :key="i" class="attach-th">
+          <img :src="img.data" alt="" />
+          <span class="attach-x" @click="removeStaged(i)">✕</span>
+        </div>
+        <div class="attach-add" @click="pickFiles">
+          <van-icon name="plus" /><span>附加图</span>
+        </div>
         <input ref="fileRef" type="file" accept="image/*" multiple hidden @change="onPickFiles" />
         <ImageEditor v-model:show="showEditor" :queue="editorQueue" @confirm="onEditorConfirm" />
-        <div v-if="staged.length" class="staged-row">
-          <div v-for="(img, i) in staged" :key="i" class="staged-th">
-            <img :src="img.data" alt="" />
-            <span class="staged-x" @click="removeStaged(i)">✕</span>
-          </div>
-        </div>
       </div>
 
       <template v-if="!summaryMode">
@@ -196,10 +196,10 @@ async function save() {
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 2px; }
 .tag-chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 13px; font-size: 12px; color: var(--text-2); }
 .tag-chip.active { border-color: var(--brand); color: var(--brand); font-weight: 600; background: color-mix(in srgb, var(--brand) 8%, transparent); }
-.attach-row { margin: 10px 2px 0; }
-.attach-btn { border: 1px dashed var(--line); background: var(--card); border-radius: 999px; padding: 6px 14px; font-size: 12px; color: var(--text-2); cursor: pointer; }
-.staged-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-.staged-th { position: relative; width: 56px; height: 56px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
-.staged-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.staged-x { position: absolute; top: 0; right: 0; width: 18px; height: 18px; background: rgba(0,0,0,0.55); color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 0 0 0 8px; }
+.attach-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 2px 0; }
+.attach-th { position: relative; aspect-ratio: 1/1; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+.attach-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.attach-x { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; background: rgba(0,0,0,0.6); color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 50%; }
+.attach-add { aspect-ratio: 1/1; border: 1px dashed var(--line); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--text-3); font-size: 12px; cursor: pointer; background: var(--card); }
+.attach-add .van-icon { font-size: 20px; }
 </style>

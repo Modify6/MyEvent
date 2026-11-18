@@ -11,8 +11,8 @@ import { useSubjectStore } from '../stores/subject.js';
 import { useVocabStore } from '../stores/vocab.js';
 import { useImageStore } from '../stores/image.js';
 import ImageEditor from '../components/ImageEditor.vue';
-import { showImagePreview } from 'vant';
 import FilterSortOptions from '../components/FilterSortOptions.vue';
+import ImgPreviewOverlay from '../components/ImgPreviewOverlay.vue';
 import { sortFilterOptions } from '../lib/util.js';
 import NoteEditor from '../components/NoteEditor.vue';
 import QuickCreate from '../components/QuickCreate.vue';
@@ -217,8 +217,10 @@ const eventTitle = (id) => eventStore.byId(id)?.title || '线索';
 // 一键复制这条记录的原文
 const copyRow = (it) => copyText(it.content);
 // 缩略图点击 → 全屏预览整组图
+// 全屏预览(自研 overlay,vant 预览在弹层上叠开会塌陷)
+const previewState = ref(null);
 function previewImages(imgs, idx) {
-  showImagePreview({ images: imgs.map((x) => x.data), startPosition: idx, closeable: true });
+  previewState.value = { images: imgs.map((x) => x.data), start: idx };
 }
 
 // 行侧边操作菜单:带文字说明(解决裸按钮提示弱的问题),单按钮不占行宽
@@ -366,10 +368,13 @@ function openHandle(it) {
         class="quick-input"
         @keydown.enter.exact.prevent="quickSend"
       />
-      <div v-if="staged.length" class="staged-row">
-        <div v-for="(img, i) in staged" :key="i" class="staged-th">
+      <div class="attach-grid">
+        <div v-for="(img, i) in staged" :key="i" class="attach-th">
           <img :src="img.data" alt="" />
-          <span class="staged-x" @click="removeStaged(i)">✕</span>
+          <span class="attach-x" @click="removeStaged(i)">✕</span>
+        </div>
+        <div class="attach-add" @click="pickFiles">
+          <van-icon name="plus" /><span>附加图</span>
         </div>
       </div>
       <div class="quick-foot">
@@ -492,6 +497,7 @@ function openHandle(it) {
       <van-button plain round size="small" @click="loadMore">还有 {{ feed.length - limit }} 条 · 加载更多</van-button>
     </div>
 
+    <ImgPreviewOverlay :show="!!previewState" :images="previewState?.images || []" :start="previewState?.start || 0" @close="previewState = null" />
     <NoteEditor v-model:show="showEditor" :thought="editItem?.type === 't' ? editItem.raw : null" :entry="editItem?.type === 'e' ? editItem.raw : null" @saved="editItem = null" />
 
     <QuickCreate v-model:show="showQuickCreate" :type="quickCreateType" @created="onQuickCreated" />
@@ -538,10 +544,12 @@ function openHandle(it) {
 .trig { color: var(--text-2); }
 .row-main { flex: 1; min-width: 0; }
 .row-more { color: var(--text-3); font-size: 16px; margin-top: 4px; flex: none; cursor: pointer; padding: 0 4px; }
-.staged-row { display: flex; gap: 8px; margin: 8px 2px 0; flex-wrap: wrap; }
-.staged-th { position: relative; width: 56px; height: 56px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
-.staged-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.staged-x { position: absolute; top: 0; right: 0; width: 18px; height: 18px; background: rgba(0,0,0,0.55); color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 0 0 0 8px; }
+.attach-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 2px 0; }
+.attach-th { position: relative; aspect-ratio: 1/1; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+.attach-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.attach-x { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; background: rgba(0,0,0,0.6); color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 50%; }
+.attach-add { aspect-ratio: 1/1; border: 1px dashed var(--line); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--text-3); font-size: 12px; cursor: pointer; background: var(--card); }
+.attach-add .van-icon { font-size: 20px; }
 .th-row { display: flex; gap: 6px; margin-top: 6px; overflow-x: auto; }
 .th-img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); cursor: pointer; flex: none; }
 .feed-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
