@@ -9,6 +9,8 @@ import { useThoughtStore } from '../stores/thought.js';
 import { useEventStore } from '../stores/event.js';
 import { useSubjectStore } from '../stores/subject.js';
 import { useVocabStore } from '../stores/vocab.js';
+import FilterSortOptions from '../components/FilterSortOptions.vue';
+import { sortFilterOptions } from '../lib/util.js';
 import NoteEditor from '../components/NoteEditor.vue';
 import QuickCreate from '../components/QuickCreate.vue';
 import AttachGuide from '../components/AttachGuide.vue';
@@ -75,14 +77,36 @@ const fType = ref('');
 const fSubject = ref('');
 const fThread = ref('');
 const fHandle = ref('');
+const typeItemRef = ref(null);
+const subjectItemRef = ref(null);
+const threadItemRef = ref(null);
+// 筛选选项排序:默认按频次(命中条数降序),localStorage 记忆
+const FS_KEY = 'myevent.filterSort';
+const filterSort = ref(localStorage.getItem(FS_KEY) || 'freq');
+function setFilterSort(m) {
+  filterSort.value = m;
+  localStorage.setItem(FS_KEY, m);
+}
+// 筛选选项带命中计数(按全量统计),排序由 FilterSortOptions 按 filterSort 处理(默认频次)
+const cnt = (fn) => allItems.value.filter(fn).length;
 const typeOptions = computed(() => [
-  { text: '全部类型', value: '' },
-  ...vocabStore.kinds.map((k) => ({ text: k, value: k })),
-  { text: '记录', value: '记录' },
-  { text: '小结', value: '小结' },
+  { text: '全部类型', value: '', count: allItems.value.length },
+  ...vocabStore.kinds.map((k) => ({ text: k, value: k, count: cnt((it) => it.kind === k) })),
+  { text: '记录', value: '记录', count: cnt((it) => it.kind === '记录') },
+  { text: '小结', value: '小结', count: cnt((it) => it.kind === '小结') },
 ]);
-const subjectOptions = computed(() => [{ text: '全部对象', value: '' }, ...subjectStore.active.map((s) => ({ text: s.name, value: s.id }))]);
-const threadOptions = computed(() => [{ text: '全部线索', value: '' }, ...eventStore.threads.map((e) => ({ text: e.title.slice(0, 12), value: e.id }))]);
+const subjectOptions = computed(() => [
+  { text: '全部对象', value: '', count: allItems.value.length },
+  ...subjectStore.active.map((s) => ({ text: s.name, value: s.id, count: cnt((it) => it.subjectId === s.id) })),
+]);
+const threadOptions = computed(() => [
+  { text: '全部线索', value: '', count: allItems.value.length },
+  ...eventStore.threads.map((e) => ({ text: e.title.slice(0, 12), value: e.id, count: cnt((it) => it.eventId === e.id) })),
+]);
+// 下拉标题显示当前选中项
+const typeTitle = computed(() => (fType.value ? String(fType.value) : '类型'));
+const subjectTitle = computed(() => (fSubject.value ? '@ ' + subjectStore.nameOf(fSubject.value) : '对象'));
+const threadTitle = computed(() => (fThread.value ? '# ' + eventTitle(fThread.value).slice(0, 10) : '线索'));
 const handleOptions = computed(() => [
   { text: '处理状态', value: '' },
   ...HANDLE_STATUSES.map((s) => ({ text: HANDLE_STATUS_META[s].label, value: s })),
@@ -90,7 +114,7 @@ const handleOptions = computed(() => [
 watch([fType, fSubject, fThread, fHandle], () => { limit.value = PAGE_SIZE; });
 
 // —— 统一记录时间线:thoughts(独立/挂对象/挂线索的随手记) + eventEntries(线索过程记录) ——
-const feed = computed(() => {
+const allItems = computed(() => {
   const items = [];
   for (const t of thoughtStore.active) {
     items.push({
@@ -110,7 +134,10 @@ const feed = computed(() => {
       handleStatus: en.handleStatus || 'pending', handleNote: en.handleNote || '',
     });
   }
-  let arr = items.sort((a, b) => b.at - a.at);
+  return items.sort((a, b) => b.at - a.at);
+});
+const feed = computed(() => {
+  let arr = allItems.value;
   if (fType.value) arr = arr.filter((it) => it.kind === fType.value);
   if (fSubject.value) arr = arr.filter((it) => it.subjectId === fSubject.value);
   if (fThread.value) arr = arr.filter((it) => it.eventId === fThread.value);
@@ -341,9 +368,15 @@ function openHandle(it) {
     </div>
 
     <van-dropdown-menu v-if="feed.length || fType || fSubject || fThread || fHandle">
-      <van-dropdown-item v-model="fType" :options="typeOptions" title="类型" />
-      <van-dropdown-item v-model="fSubject" :options="subjectOptions" title="对象" />
-      <van-dropdown-item v-model="fThread" :options="threadOptions" title="线索" />
+      <van-dropdown-item ref="typeItemRef" :title="typeTitle">
+        <FilterSortOptions v-model="fType" :sort="filterSort" @update:sort="setFilterSort" :options="typeOptions" @close="typeItemRef?.toggle(false)" />
+      </van-dropdown-item>
+      <van-dropdown-item ref="subjectItemRef" :title="subjectTitle">
+        <FilterSortOptions v-model="fSubject" :sort="filterSort" @update:sort="setFilterSort" :options="subjectOptions" @close="subjectItemRef?.toggle(false)" />
+      </van-dropdown-item>
+      <van-dropdown-item ref="threadItemRef" :title="threadTitle">
+        <FilterSortOptions v-model="fThread" :sort="filterSort" @update:sort="setFilterSort" :options="threadOptions" @close="threadItemRef?.toggle(false)" />
+      </van-dropdown-item>
       <van-dropdown-item v-model="fHandle" :options="handleOptions" title="处理" />
     </van-dropdown-menu>
 

@@ -17,3 +17,16 @@ export function upsertById(list, row) {
   return row;
 }
 
+// 筛选选项排序:mode='freq' 按命中频次降序(同频按名称),mode='name' 按中文名称;
+// "全部"类选项(value 为空串)恒置顶。options: [{ text, value, count }]
+export function sortFilterOptions(options, mode = 'freq') {
+  const byName = (a, b) => String(a.text).localeCompare(String(b.text), 'zh');
+  const pinned = options.filter((o) => !o.value);
+  const rest = options.filter((o) => !!o.value);
+  const sorted = mode === 'name'
+    ? [...rest].sort(byName)
+    : [...rest].sort((a, b) => (b.count || 0) - (a.count || 0) || byName(a, b));
+  return [...pinned, ...sorted];
+}
+
+
