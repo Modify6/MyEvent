@@ -358,7 +358,7 @@ async function removeThread() {
 .row-more { color: var(--text-3); font-size: 16px; margin-top: 3px; flex: none; cursor: pointer; padding: 0 4px; }
 .tl-item.handled .tl-text { color: var(--text-3); }
 .tl-item.issue .tl-text { color: var(--text-2); }
-.handle-note { font-size: 12px; margin-top: 3px; color: var(--text-2); background: var(--card-2); border-radius: 6px; padding: 4px 8px; white-space: pre-wrap; word-break: break-word; }
+.handle-note { font-size: 12px; margin-top: 3px; color: var(--text-2); background: var(--card-2); border-radius: 6px; padding: 4px 8px; white-space: pre-wrap; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .tl-item.issue .handle-note { color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
 .feed-chips { margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; }
 .handle-tag { cursor: pointer; display: inline-flex; }

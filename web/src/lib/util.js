@@ -7,3 +7,13 @@ export function uuid() {
     return v.toString(16);
   });
 }
+
+// store 乐观更新专用:写库后同步内存,按 id replace-or-push
+// (onChange→load 是异步的且与 push 竞序——直接 push 在 load 先完成时会重复,直接 replace 在 load 未跑时丢失)
+export function upsertById(list, row) {
+  const i = list.findIndex((x) => x.id === row.id);
+  if (i >= 0) list[i] = row;
+  else list.push(row);
+  return row;
+}
+

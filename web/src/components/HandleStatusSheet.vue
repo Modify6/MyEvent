@@ -52,6 +52,8 @@ const currentStatus = computed(() => {
   return t.handleStatus || 'pending';
 });
 const history = computed(() => props.target?.statusHistory || []);
+// 无变化禁用保存:查看后直接点保存不会再刷一条「已处理 → 已处理」留痕
+const dirty = computed(() => form.status !== currentStatus.value || form.note !== (props.target?.handleNote || ''));
 
 watch(
   () => props.show,
@@ -74,7 +76,7 @@ async function save() {
     } else {
       await thoughtStore.setHandle(t.id, form.status, form.note);
     }
-    showSuccessToast('处理状态已更新(已留痕)');
+    showSuccessToast(form.status !== currentStatus.value ? '处理状态已更新(已留痕)' : '处理说明已更新');
     emit('saved');
     emit('update:show', false);
   } catch (e) {
@@ -124,7 +126,7 @@ async function save() {
         </div>
       </div>
 
-      <van-button type="primary" round block style="margin-top: 14px" @click="save">保存</van-button>
+      <van-button type="primary" round block style="margin-top: 14px" :disabled="!dirty" @click="save">保存</van-button>
     </div>
   </van-popup>
 </template>
@@ -141,5 +143,5 @@ async function save() {
 .history-item { padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
 .history-item:last-child { border-bottom: 0; }
 .hist-trans { margin-left: 8px; font-weight: 600; }
-.history-note { font-size: 12px; color: var(--text-2); margin-top: 2px; white-space: pre-wrap; word-break: break-word; }
+.history-note { font-size: 12px; color: var(--text-2); margin-top: 2px; white-space: pre-wrap; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 </style>

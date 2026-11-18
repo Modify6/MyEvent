@@ -2,7 +2,7 @@
 // 0.3.0：事件 = 可持续追加的线索；小结是自由文本（kind='summary' 的过程记录），无复盘状态机
 import { defineStore } from 'pinia';
 import { putRow, softDelete, getAllEvents, getAllEventEntries, onChange } from '../db/repo.js';
-import { uuid } from '../lib/util.js';
+import { uuid, upsertById } from '../lib/util.js';
 import { logInfo } from '../lib/logger.js';
 import { THREAD_STATES, THREAD_STATE_META, HANDLE_STATUSES } from '../lib/domain.js';
 
@@ -53,8 +53,8 @@ export const useEventStore = defineStore('event', {
         createdAt: Date.now(),
       };
       await putRow('events', ev);
-      // 同步进内存状态:onChange→load 是异步的,紧随其后的读写(如改状态)不等它
-      this.events.push(ev);
+      // 同步进内存状态:onChange→load 异步且与写入竞序,按 id replace-or-push 防重复
+      upsertById(this.events, ev);
       logInfo('event', `新建线索「${ev.title}」`);
       return ev;
     },
@@ -65,6 +65,7 @@ export const useEventStore = defineStore('event', {
       const st = data.startAt ?? null;
       if (st == null) next.startAt = ev.startAt;
       await putRow('events', next);
+      upsertById(this.events, next);
       return next;
     },
     async remove(id) {
@@ -92,7 +93,7 @@ export const useEventStore = defineStore('event', {
         createdAt: Date.now(),
       };
       await putRow('eventEntries', row);
-      this.entries.push(row);
+      upsertById(this.entries, row);
       logInfo('event', kind === 'summary' ? '写小结' : `追加过程记录(${row.triggerKind || '无触发源'})`);
       return row;
     },
@@ -111,6 +112,7 @@ export const useEventStore = defineStore('event', {
         edits: [...(en.edits || []), { at: Date.now(), content: en.content, triggerKind: en.triggerKind || '', triggerNote: en.triggerNote || '' }],
       };
       await putRow('eventEntries', next);
+      upsertById(this.entries, next);
       logInfo('event', '修改过程记录(已留痕)');
       return next;
     },
@@ -128,52 +130,61 @@ export const useEventStore = defineStore('event', {
         edits: [...(en.edits || []), { at: Date.now(), content: en.content, triggerKind: en.triggerKind || '', triggerNote: en.triggerNote || '', movedFrom: en.eventId }],
       };
       await putRow('eventEntries', next);
+      upsertById(this.entries, next);
       logInfo('event', '过程记录移至其他线索(已留痕)');
       return next;
     },
-    // 过程记录标记处理:通用三态(未处理/已处理/有问题)+结果说明,变更写 statusHistory 留痕
+    // 过程记录标记处理:通用三态(未处理/已处理/有问题)+结果说明
+    // 无变化不写库不留痕;状态真变才追加 statusHistory,仅改说明只更新备注
     async setEntryHandle(id, status, note = '') {
       const en = this.entries.find((x) => x.id === id && !x.deleted);
       if (!en) throw new Error('记录不存在');
       if (!HANDLE_STATUSES.includes(status)) throw new Error('未知的处理状态');
       const text = String(note || '').trim();
       const from = en.handleStatus || 'pending';
+      const statusChanged = from !== status;
+      if (!statusChanged && (en.handleNote || '') === text) {
+        return en; // 什么都没改:不写库、不留痕
+      }
       const next = {
         ...en,
         handleStatus: status,
         handleNote: text,
-        handledAt: status === 'pending' ? null : Date.now(),
-        statusHistory: [...(en.statusHistory || []), { at: Date.now(), from, to: status, note: text }],
+        handledAt: status === 'pending' ? null : (statusChanged ? Date.now() : en.handledAt || Date.now()),
+        statusHistory: statusChanged ? [...(en.statusHistory || []), { at: Date.now(), from, to: status, note: text }] : (en.statusHistory || []),
       };
       await putRow('eventEntries', next);
-      const idx = this.entries.findIndex((x) => x.id === id);
-      if (idx >= 0) this.entries[idx] = next;
-      logInfo('event', `过程记录处理状态 → ${status}${text ? `:${text.slice(0, 20)}` : ''}`);
+      upsertById(this.entries, next);
+      logInfo('event', statusChanged ? `过程记录处理状态 → ${status}${text ? `:${text.slice(0, 20)}` : ''}` : '过程记录处理说明已更新(状态未变,不留痕)');
       return next;
     },
     async removeEntry(id) {
       await softDelete('eventEntries', id);
     },
     // 线索状态流转:进行中/已完结/已搁置/有问题(0.8.0) —— 纯手动,过程全保留
-    // 状态变更写 statusHistory 留痕;完结/有问题时填了说明,自动落一条过程记录(处理结果进过程时间线)
+    // 无变化不写库不留痕(查看后直接保存不刷历史);状态真变才追加 statusHistory;
+    // 状态真变为完结/有问题且填了说明时,自动落一条过程记录(处理结果进过程时间线)
     async setThreadState(id, state, note = '') {
       const ev = this.byId(id);
       if (!ev || !THREAD_STATES.includes(state)) return;
       const text = String(note || '').trim();
       const from = ev.threadState || 'open';
+      const statusChanged = from !== state;
+      if (!statusChanged && (ev.handleNote || '') === text) {
+        return ev; // 什么都没改:不写库、不留痕
+      }
       const next = {
         ...ev,
         threadState: state,
         handleNote: text || (state === 'open' ? '' : ev.handleNote || ''),
-        statusHistory: [...(ev.statusHistory || []), { at: Date.now(), from, to: state, note: text }],
+        statusHistory: statusChanged ? [...(ev.statusHistory || []), { at: Date.now(), from, to: state, note: text }] : (ev.statusHistory || []),
       };
       await putRow('events', next);
       // 同步进内存状态:onChange→load 是异步的,紧随其后的读写不等它(同 addEntry 的取舍)
-      const idx = this.events.findIndex((x) => x.id === id);
-      if (idx >= 0) this.events[idx] = next;
+      upsertById(this.events, next);
       const label = THREAD_STATE_META[state]?.label || state;
-      logInfo('event', `线索状态 → ${label}${text ? `:${text.slice(0, 20)}` : ''}`);
-      if (text && ['done', 'issue'].includes(state)) {
+      logInfo('event', statusChanged ? `线索状态 → ${label}${text ? `:${text.slice(0, 20)}` : ''}` : '线索处理说明已更新(状态未变,不留痕)');
+      if (statusChanged && text && ['done', 'issue'].includes(state)) {
         await this.addEntry({
           eventId: id,
           content: `状态 → ${label}${text ? ':' + text : ''}`,

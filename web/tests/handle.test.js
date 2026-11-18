@@ -57,6 +57,21 @@ describe('记录处理状态(thought.setHandle)', () => {
     expect(row.handledAt).toBeNull();
     await expect(thoughtStore.setHandle(t.id, 'bogus', '')).rejects.toThrow('未知的处理状态');
   });
+
+  it('0.9.9:状态与说明都未变时不写库不留痕;仅改说明只更新备注不刷历史', async () => {
+    const t = await thoughtStore.quickAdd({ content: '某需求' });
+    await thoughtStore.setHandle(t.id, 'done', '结果A');
+    const before = JSON.stringify(thoughtStore.byId(t.id));
+    // 查看后原样保存:不写库不留痕
+    await thoughtStore.setHandle(t.id, 'done', '结果A');
+    expect(JSON.stringify(thoughtStore.byId(t.id))).toBe(before);
+    expect(thoughtStore.byId(t.id).statusHistory).toHaveLength(1);
+    // 仅改说明:备注更新,但状态未变,不追加历史
+    await thoughtStore.setHandle(t.id, 'done', '结果B(补充)');
+    const row = thoughtStore.byId(t.id);
+    expect(row.handleNote).toBe('结果B(补充)');
+    expect(row.statusHistory).toHaveLength(1);
+  });
 });
 
 describe('线索处理状态(event.setThreadState 扩展)', () => {
@@ -70,6 +85,20 @@ describe('线索处理状态(event.setThreadState 扩展)', () => {
     expect(row.statusHistory).toHaveLength(1);
     const entries = eventStore.entriesOf(ev.id);
     expect(entries.some((en) => en.content.includes('状态 → 已完结') && en.content.includes('按方案X实现完成'))).toBe(true);
+  });
+
+  it('0.9.9:线索状态未变时不写库不留痕,也不自动落过程记录', async () => {
+    const ev = await eventStore.capture({ title: '需求C' });
+    await eventStore.setThreadState(ev.id, 'done', '完成');
+    const entriesBefore = eventStore.entriesOf(ev.id).length;
+    await eventStore.setThreadState(ev.id, 'done', '完成');
+    expect(eventStore.byId(ev.id).statusHistory).toHaveLength(1);
+    expect(eventStore.entriesOf(ev.id).length).toBe(entriesBefore);
+    await eventStore.setThreadState(ev.id, 'done', '完成(补充验收标准)');
+    const row = eventStore.byId(ev.id);
+    expect(row.handleNote).toBe('完成(补充验收标准)');
+    expect(row.statusHistory).toHaveLength(1);
+    expect(eventStore.entriesOf(ev.id).length).toBe(entriesBefore);
   });
 
   it('标记有问题(新状态);重新打开清说明', async () => {
