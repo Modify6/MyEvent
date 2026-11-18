@@ -182,12 +182,14 @@ const rowActions = (it) => {
     const c = avatarColor(sid);
     a.push({ key: 'subject', icon: 'contact', color: c, title: '进入对象', sub: subjectStore.nameOf(sid) });
   }
+  a.push({ key: 'handle', icon: 'todo-list-o', color: '#f5a623', title: '标记处理', sub: '状态与结果说明' });
   a.push({ key: 'sep' });
   a.push({ key: 'copy', icon: 'records', color: '#8f9bb3', title: '复制这条' });
   return a;
 };
 function onRowAction(a, it) {
   if (a.key === 'subject') router.push(`/subjects/${it.raw.subjectId}`);
+  else if (a.key === 'handle') openRowHandle(it);
   else if (a.key === 'copy') copyRow(it);
 }
 const loadMore = () => { limit.value += PAGE_SIZE; };

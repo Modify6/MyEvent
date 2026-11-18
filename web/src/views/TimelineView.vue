@@ -170,6 +170,7 @@ function setPopoverPlace(e) {
 const rowActions = (it) => {
   const a = [];
   if (it.eventId) a.push({ key: 'event', icon: 'notes-o', color: '#4f6ef7', title: '进入线索', sub: eventTitle(it.eventId) });
+  a.push({ key: 'handle', icon: 'todo-list-o', color: '#f5a623', title: '标记处理', sub: '状态与结果说明' });
   if (it.subjectId) {
     const c = avatarColor(it.subjectId);
     a.push({ key: 'subject', icon: 'contact', color: c, title: '进入对象', sub: subjectName(it.subjectId) });
@@ -181,6 +182,7 @@ const rowActions = (it) => {
 function onRowAction(a, it) {
   if (a.key === 'event') router.push(`/events/${it.eventId}`);
   else if (a.key === 'subject') router.push(`/subjects/${it.subjectId}`);
+  else if (a.key === 'handle') openHandle(it);
   else if (a.key === 'copy') copyRow(it);
 }
 // 视觉映射:类型色标签 / 触发源图标

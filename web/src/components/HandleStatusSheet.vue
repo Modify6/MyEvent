@@ -3,7 +3,7 @@
 // 记录(thought)走 thoughtStore.setHandle;线索(event)走 eventStore.setThreadState(open/done/shelved/issue)
 // 设计取舍:通用三态不特化场景 —— 未处理/已处理/有问题,结果说明自由文本
 import { reactive, ref, watch, computed } from 'vue';
-import { showFailToast, showSuccessToast } from 'vant';
+import { showFailToast, showToast, showSuccessToast } from 'vant';
 import { useThoughtStore } from '../stores/thought.js';
 import { useEventStore } from '../stores/event.js';
 import { HANDLE_STATUSES, HANDLE_STATUS_META, THREAD_STATE_META } from '../lib/domain.js';
@@ -69,6 +69,11 @@ async function save() {
   try {
     const t = props.target;
     if (!t) return;
+    if (!dirty.value) {
+      showToast('没有改动,无需保存');
+      emit('update:show', false);
+      return;
+    }
     if (isThread()) {
       await eventStore.setThreadState(t.id, form.status, form.note);
     } else if (isEntry()) {
@@ -126,7 +131,7 @@ async function save() {
         </div>
       </div>
 
-      <van-button type="primary" round block style="margin-top: 14px" :disabled="!dirty" @click="save">保存</van-button>
+      <van-button type="primary" round block style="margin-top: 14px" @click="save">保存</van-button>
     </div>
   </van-popup>
 </template>
