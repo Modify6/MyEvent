@@ -212,6 +212,12 @@ const attachThreads = computed(() => {
 });
 const attachSubjectName = computed(() => subjectStore.nameOf(form.subjectId));
 
+// 页头摘要:今天的记录数(thoughts + entries)
+const todayCount = computed(() => {
+  const isToday = (x) => dayjs(x).isSame(dayjs(), 'day');
+  return thoughtStore.active.filter((x) => isToday(x.at)).length +
+    eventStore.entries.filter((en) => !en.deleted && isToday(en.at)).length;
+});
 const subjectName = (id) => subjectStore.nameOf(id);
 const eventTitle = (id) => eventStore.byId(id)?.title || '线索';
 // 一键复制这条记录的原文
@@ -351,6 +357,7 @@ function openHandle(it) {
         <van-icon name="setting-o" size="20" @click="router.push('/settings')" />
       </div>
     </div>
+    <div class="page-sub">今天 · {{ todayCount }} 条</div>
 
     <!-- 快捷输入:内容即可发送;细节全部可选展开 -->
     <div class="hint-line seg-explain">

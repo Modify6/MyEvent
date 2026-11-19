@@ -519,3 +519,52 @@ body {
   line-height: 1.2;
 }
 .stat-grid .lab { margin-top: 0; }
+
+/* ===== 0.9.17 Chip 体系统一:统一字号/高度/圆角/字重,收敛四套并存样式 ===== */
+/* tokens:表单选择 chips 与列表 meta chips 分两档,但同族同形 */
+.tag-chip {
+  font-size: 12px;
+  padding: 5px 13px;
+  border-radius: 999px;
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.2;
+}
+/* 列表 meta 小签(.chip):与 tag-chip 同形,略小一档 */
+.chip {
+  font-size: 11px;
+  padding: 1px 9px;
+  border-radius: 999px;
+  min-height: 20px;
+  font-weight: 500;
+}
+/* 对象类型小签(SubjectsView 详情):方角改同族圆角,仅保留"小一档"差异 */
+.type-tag {
+  font-size: 10px;
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-weight: 600;
+}
+/* 分类选择项:与 tag-chip 同形 */
+.cat-grid .cat-item {
+  font-size: 12px;
+  padding: 5px 12px;
+  min-height: 26px;
+}
+/* Vant 标签(StatusTag/处理状态等):统一字重与高度 */
+.van-tag {
+  font-weight: 500;
+}
+.van-tag--plain {
+  background: transparent;
+}
+
+/* ===== 0.9.17 页面头摘要副标题 ===== */
+.page-sub {
+  font-size: 12px;
+  color: var(--text-3);
+  margin: -2px 2px 8px;
+  font-variant-numeric: tabular-nums;
+}

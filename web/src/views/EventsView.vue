@@ -119,6 +119,7 @@ const showFolderManage = ref(false);
         <van-button size="small" round type="primary" icon="plus" @click="showNew = true">新线索</van-button>
       </div>
     </div>
+    <div class="page-sub">{{ store.threads.length }} 条线索 · 进行中 {{ store.threads.filter((x) => (x.threadState || 'open') === 'open').length }}</div>
 
     <div class="hint-line hint-brand">🧵 线索 = 一件持续跟进的事;完结/搁置只是标记,过程记录全保留</div>
 

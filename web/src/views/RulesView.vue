@@ -52,6 +52,7 @@ async function mark(r, valid) {
       <h1>经验库</h1>
       <van-button size="small" round type="primary" icon="plus" @click="editRule = null; showForm = true">新规则</van-button>
     </div>
+    <div class="page-sub">{{ store.active.length }} 条规则 · 验证 {{ store.active.reduce((n, x) => n + (x.verifyCount || 0), 0) }} 次</div>
 
     <van-search v-model="q" placeholder="搜场景 / 信号 / 规则内容" shape="round" background="transparent" />
     <div class="hint-line hint-brand">📜 <b>规则</b> = 沉淀下来的「遇到 X 就怎么做」;实际用了一次,就点下面的「这次<b style="color: #34c273">有效</b>/<b style="color: var(--danger)">无效</b>」登记 —— 让规则自己被验证</div>

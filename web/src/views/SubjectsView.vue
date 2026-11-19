@@ -60,6 +60,7 @@ const sortFn = (a, b) => {
 };
 
 // 按自定义文件夹分组抽屉(scope=subject)+ 未分类(folderId 空);组内排序;关键词过滤组内条目
+const foldersActive = computed(() => folderStore.byScope('subject'));
 const drawers = computed(() => {
   const arr = store.active.filter(matchKw).sort(sortFn);
   const groups = folderStore.byScope('subject').map((f) => ({
@@ -106,6 +107,7 @@ const typeStyle = (s) => {
         <van-button size="small" round type="primary" icon="plus" @click="showForm = true">新建</van-button>
       </div>
     </div>
+    <div class="page-sub">{{ store.active.length }} 个对象 · {{ foldersActive.length }} 个文件夹</div>
 
     <div class="hint-line hint-brand">🎯 对象 = 长期关注的主体(人 / 项目 / 公司 / 主题):想法挂上去,时间线就是认知演化史</div>
 
@@ -175,7 +177,7 @@ const typeStyle = (s) => {
 .avatar { flex: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; }
 .row-main { flex: 1; min-width: 0; }
 .row-title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-.type-tag { flex: none; font-size: 10px; border: 1px solid; border-radius: 4px; padding: 0 5px; font-weight: 600; }
+.type-tag { flex: none; border: 1px solid; } /* 尺寸/圆角/字重走 0.9.17 全局 token */
 .view-line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
 .stats { font-size: 11px; margin-top: 2px; }
 .right-col { display: flex; align-items: center; gap: 8px; }
