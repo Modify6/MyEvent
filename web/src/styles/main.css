@@ -447,3 +447,75 @@ body {
 /* 轻量动效:列表项渐入(分页追加同样生效)、统计大数弹入 */
 .feed-item, .subj-line, .ev-item, .tl-line, .tl-item, .trash-item, .s-line, .row-line { animation: fadeUp 0.18s ease both; }
 .big-stat { animation: popIn 0.25s ease both; }
+
+/* ===== 0.9.16 美化包:全局微交互 / 卡片质感 / 弹层 grabber / 空状态 / 数字排版 ===== */
+
+/* ① 按压反馈:可点元素统一过渡与缩放 */
+.tag-chip, .cat-grid .cat-item, .cat-item, .seg button, .fs-sort, .attach-add, .attach-th img,
+.staged-th img, .th-img, .heat-cell, .mv-row, .chip, .row-line, .ed-h {
+  transition: transform 0.12s ease, box-shadow 0.15s ease, background-color 0.15s ease,
+    border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+.tag-chip:active, .cat-grid .cat-item:active, .cat-item:active, .fs-sort:active,
+.attach-add:active, .chip:active { transform: scale(0.95); }
+.van-button:active { transform: scale(0.96); }
+.seg button { transition: transform 0.12s ease, background-color 0.15s ease, color 0.15s ease; }
+.seg button:active { transform: scale(0.97); }
+.attach-th img:active, .staged-th img:active, .th-img:active { transform: scale(0.96); }
+
+/* 列表行按压底色(圆角化,按压不溢出卡片) */
+.subj-line, .ev-item, .feed-item, .tl-line, .tl-item, .trash-item, .mv-row, .row-line {
+  border-radius: 10px;
+  transition: background-color 0.12s ease;
+}
+.subj-line:active, .ev-item:active, .feed-item:active, .tl-line:active, .tl-item:active,
+.trash-item:active, .mv-row:active, .row-line:active {
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+/* ② 卡片质感:浅色双层柔影,深色描边+顶部内高光(阴影在深色下无效) */
+.card {
+  box-shadow: 0 1px 2px rgba(20, 30, 60, 0.05), 0 4px 14px rgba(20, 30, 60, 0.05);
+}
+@media (prefers-color-scheme: dark) {
+  .card {
+    box-shadow: inset 0 0 0 1px var(--line), inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  }
+}
+
+/* ③ 底部弹层顶部拖动条(iOS 风格 grabber) */
+.van-popup.van-popup--bottom::before {
+  content: '';
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 38px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--text-3);
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ④ 空状态排版 */
+.empty-tip {
+  font-size: 13px;
+  line-height: 1.9;
+  padding: 30px 16px;
+}
+.empty-tip b { color: var(--text-2); }
+
+/* ⑤ 数字排版:回顾页统计块(大数字+小标签,分块底色) */
+.stat-grid .cell {
+  padding: 10px 0 8px;
+  border-radius: 10px;
+  background: var(--card-2);
+}
+.stat-grid .num {
+  font-size: 24px;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+.stat-grid .lab { margin-top: 0; }
